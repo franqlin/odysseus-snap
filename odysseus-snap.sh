@@ -237,7 +237,10 @@ xdg-open "$OUTPUT_FILE_PDF"
 
 # Interface gráfica principal
 while true; do
-    acao=$(zenity --list --title="Odysseus SNAP" --column="Ação" "Selecionar Pasta de Trabalho" "Capturar Área da Tela" "Gravar Tela" "Abrir Pasta de Trabalho" "Criar Relatório em PDF" "Sair")
+    acao=$(zenity --list --title="Odysseus SNAP" --column="Ação" "Selecionar Pasta de Trabalho" "Capturar Área da Tela" "Gravar Tela" "Abrir Pasta de Trabalho" "Criar Relatório em PDF" "Sair" --height=300 --width=400 --text="Selecione uma ação:" --cancel-label="Sair")
+    if [ $? -ne 0 ]; then
+        break
+    fi
     case $acao in
         "Selecionar Pasta de Trabalho")
             selecionar_pasta
