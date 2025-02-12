@@ -57,7 +57,25 @@ selecionar_pasta() {
     fi
     echo "Pasta selecionada: $pasta"
 }
+# Função para obter informações do sistema
+obter_info_sistema() {
+    echo "Data e Hora: $(date)"
+    echo "Host: $(hostname)"
+    echo "Usuário: $(whoami)"
+    echo "IP: $(hostname -I | awk '{print $1}')"
+}
 
+# Função para gravar log
+gravar_log() {
+    local acao=$1
+    local arquivo=$2
+    {
+        obter_info_sistema
+        echo "Ação: $acao"
+        echo "Arquivo: $arquivo"
+        echo "-------------------------"
+    } >> "$pasta/odysseus_snap.log"
+}
 # Função para capturar uma área da tela
 capturar_area() {
     if [ -z "$pasta" ]; then
@@ -70,8 +88,32 @@ capturar_area() {
     # Encontra o próximo número disponível para o screenshot
     for i in $(seq 1 10000); do
         if [ ! -f "$pasta/screenshot_$i.png" ]; then
+            # Captura a área selecionada
             scrot -s "$pasta/screenshot_$i.png"
+            
+            # Obtém informações da janela selecionada
+            window_info=$(xwininfo)
+            window_id=$(echo "$window_info" | grep 'Window id:' | awk '{print $4}')
+            window_name=$(xprop -id "$window_id" | grep 'WM_NAME(STRING)' | cut -d '"' -f 2)
+            
+            # Obtém a URL da aba ativa se for um navegador
+            if [[ "$window_name" == *"Mozilla Firefox"* || "$window_name" == *"Google Chrome"* ]]; then
+                url=$(xdotool getactivewindow getwindowname | awk -F' - ' '{print $1}')
+            else
+                url="N/A"
+            fi
+            
+            # Exibe mensagem de confirmação
             zenity --info --text="Captura de tela salva em $pasta/screenshot_$i.png"
+            
+            # Grava log da ação
+            {
+                echo "Janela Selecionada: $window_name"
+                echo "Informações da Janela:"
+                echo "$window_info"
+                echo "URL: $url"
+            } >> "$pasta/odysseus_snap.log"
+            gravar_log "Captura de Tela" "$pasta/screenshot_$i.png \n $window_info \n URL: $url"
             break
         fi
     done
@@ -113,6 +155,7 @@ gravar_tela() {
             # Interrompe a gravação
             kill $ffmpeg_pid
             zenity --info --text="Gravação de tela salva em $pasta/screencast_$i.mp4"
+             gravar_log "Gravação de Tela" "$pasta/screencast_$i.mp4"
             break
         fi
     done
@@ -233,11 +276,12 @@ zenity --info --text="Relatório gerado em $OUTPUT_FILE_PDF e $OUTPUT_FILE_ODT"
 
 # Abrir o relatório PDF gerado com a aplicação padrão
 xdg-open "$OUTPUT_FILE_PDF"
+gravar_log "Gravação de Tela" "$pasta/$OUTPUT_FILE_PDF"
 }
 
 # Interface gráfica principal
 while true; do
-    acao=$(zenity --list --title="Odysseus SNAP" --column="Ação" "Selecionar Pasta de Trabalho" "Capturar Área da Tela" "Gravar Tela" "Abrir Pasta de Trabalho" "Criar Relatório em PDF" "Sair" --height=300 --width=400 --text="Selecione uma ação:" --cancel-label="Sair")
+    acao=$(zenity --list --title="Odysseus SNAP" --column="Ação" "Selecionar Pasta de Trabalho" "Capturar Área da Tela" "Gravar Tela" "Abrir Pasta de Trabalho" "Criar Relatório em PDF" "Sair" --height=300 --width=400 --text="Selecione uma ação:" --cancel-label="Sair" --hide-header)
     if [ $? -ne 0 ]; then
         break
     fi
