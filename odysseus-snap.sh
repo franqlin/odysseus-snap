@@ -1,5 +1,5 @@
 #!/bin/bash
-
+$tinyproxy_pid
 # Verifica se o scrot está instalado
 if ! command -v scrot &> /dev/null
 then
@@ -58,6 +58,12 @@ if ! command -v xclip &> /dev/null
 then
     echo "xclip não está instalado. Instalando..."
     sudo apt-get install xclip -y
+fi
+# Verifica se o Tinyproxy está instalado
+if ! command -v tinyproxy &> /dev/null
+then
+    echo "Tinyproxy não está instalado. Instalando..."
+    sudo apt-get install tinyproxy -y
 fi
 # Função para selecionar a pasta de trabalho
 selecionar_pasta() {
@@ -129,26 +135,8 @@ capturar_area() {
     } >> "$pasta/odysseus_snap.log"
     gravar_log "Captura de Tela" "$screenshot_file \n $window_info \n JANELA: $url"
 }
-# Função para interceptar endereços
-interceptar_enderecos() {
-    if [ -z "$pasta" ]; then
-        zenity --error --text="Nenhuma pasta selecionada. Selecione uma pasta primeiro."
-        return
-    fi
 
-    output_log="$pasta/odysseus_firefox.log"
 
-    # Verifica se o httpry está instalado
-    if ! command -v httpry &> /dev/null; then
-        zenity --error --text="httpry não está instalado. Instale-o usando 'sudo apt-get install httpry'."
-        return
-    fi
-    
-     zenity --error --text="Digite a senha (sudo) para iniciar a interceptação de endereços."
-    # Inicia o httpry para capturar o tráfego HTTP
-    sudo httpry -i any -o "$output_log" &
-    httpry_pid=$!
-}
 # Função para gravar a tela
 gravar_tela() {
     if [ -z "$pasta" ]; then
@@ -335,15 +323,68 @@ zenity --info --text="Relatório gerado em $OUTPUT_FILE_PDF e $OUTPUT_FILE_ODT"
 xdg-open "$OUTPUT_FILE_PDF"
 gravar_log "Criação de Relatório" "$OUTPUT_FILE_PDF"
 }
-# Função para parar a interceptação de endereços
-parar_interceptacao() {
-    if [ -n "$httpry_pid" ]; then
-        kill $httpry_pid
-        zenity --info --text="Interceptação parada. Arquivo salvo em $output_log"
+
+
+interceptar_enderecos() {
+    if [ -z "$pasta" ]; then
+        zenity --error --text="Nenhuma pasta selecionada. Selecione uma pasta primeiro."
+        return
     fi
+
+    output_log="$pasta/odysseus_tinyproxy.log"
+
+    # Verifica se o Tinyproxy está instalado
+    if ! command -v tinyproxy &> /dev/null; then
+        zenity --error --text="Tinyproxy não está instalado. Instale-o usando 'sudo apt-get install tinyproxy'."
+        return
+    fi
+
+    # Verifica se o log do Tinyproxy existe
+    if [ ! -f /var/log/tinyproxy/tinyproxy.log ]; then
+        zenity --error --text="Log do Tinyproxy não encontrado. Certifique-se de que o Tinyproxy está configurado corretamente."
+        return
+    fi
+
+    # Monitora o log do Tinyproxy para capturar requisições HTTP/HTTPS feitas na barra de endereços
+    #| grep --line-buffered -E 'GET http://|GET https://|POST http://|POST https://'
+    tail -f /var/log/tinyproxy/tinyproxy.log | while read -r line; do
+        echo "$line" >> "$output_log"
+    done &
+    tinyproxy_pid=$!
+    echo $tinyproxy_pid > /tmp/tinyproxy_pid
+    zenity --info --text="Interceptação de endereços iniciada. PID: $tinyproxy_pid" 
 }
 
-trap parar_interceptacao EXIT 
+# Função para parar a interceptação de endereços
+parar_interceptacao() {
+    if [ -f /tmp/tinyproxy_pid ]; then
+        tinyproxy_pid=$(cat /tmp/tinyproxy_pid)
+    if [ -n "$tinyproxy_pid" ]; then
+        # Mata todos os processos filhos e zumbis
+        pkill -TERM -P $tinyproxy_pid
+        kill -9 $tinyproxy_pid
+        rm /tmp/tinyproxy_pid
+        zenity --info --text="Interceptação parada com sucesso."
+    fi
+    fi
+       # Encerra o processo tail
+    tail_pid=$(pgrep -f "tail -f /var/log/tinyproxy/tinyproxy.log")
+    --zenity --info --text="Interceptação de endereços parada. PID: $tail_pid"
+    if [ -n "$tail_pid" ]; then
+        kill $tail_pid
+    fi
+  
+}
+
+# Configura o manipulador de sinal para encerrar o processo de monitoramento ao sair
+trap parar_interceptacao EXIT
+
+# Seleciona a pasta de trabalho
+selecionar_pasta
+
+# Inicia a interceptação de endereços em uma thread
+interceptar_enderecos &
+
 # Interface gráfica principal
 while true; do
     acao=$(zenity --list --title="Odysseus SNAP" --column="Ação" "Selecionar Pasta de Trabalho" "Capturar Área da Tela" "Gravar Tela" "Interceptar Endereços" "Abrir Pasta de Trabalho" "Criar Relatório em PDF" "Sair" --height=300 --width=400 --text="Selecione uma ação:" --cancel-label="Sair" --hide-header)
@@ -370,6 +411,7 @@ while true; do
             interceptar_enderecos
             ;;
         "Sair")
+            parar_interceptacao EXIT
             break
             ;;
         *)
