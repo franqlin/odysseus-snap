@@ -325,59 +325,148 @@ gravar_log "Criação de Relatório" "$OUTPUT_FILE_PDF"
 }
 
 
+# Função para interceptar endereços
 interceptar_enderecos() {
     if [ -z "$pasta" ]; then
         zenity --error --text="Nenhuma pasta selecionada. Selecione uma pasta primeiro."
         return
     fi
 
-    output_log="$pasta/odysseus_tinyproxy.log"
+    output_log="$pasta/requests.txt"
 
-    # Verifica se o Tinyproxy está instalado
-    if ! command -v tinyproxy &> /dev/null; then
-        zenity --error --text="Tinyproxy não está instalado. Instale-o usando 'sudo apt-get install tinyproxy'."
+    # Verifica se o mitmproxy está instalado
+    if ! command -v mitmproxy &> /dev/null; then
+        zenity --error --text="mitmproxy não está instalado. Instale-o usando 'sudo apt-get install mitmproxy'."
         return
     fi
 
-    # Verifica se o log do Tinyproxy existe
-    if [ ! -f /var/log/tinyproxy/tinyproxy.log ]; then
-        zenity --error --text="Log do Tinyproxy não encontrado. Certifique-se de que o Tinyproxy está configurado corretamente."
-        return
-    fi
+    # Cria o script de filtro Python dinamicamente com o caminho correto do arquivo de log
+    filtro_py="$pasta/filter.py"
+    cat <<EOF > "$filtro_py"
+from mitmproxy import http
+from datetime import datetime
 
-    # Monitora o log do Tinyproxy para capturar requisições HTTP/HTTPS feitas na barra de endereços
-    #| grep --line-buffered -E 'GET http://|GET https://|POST http://|POST https://'
-    tail -f /var/log/tinyproxy/tinyproxy.log | while read -r line; do
-        echo "$line" >> "$output_log"
-    done &
-    tinyproxy_pid=$!
-    echo $tinyproxy_pid > /tmp/tinyproxy_pid
-    zenity --info --text="Interceptação de endereços iniciada. PID: $tinyproxy_pid" 
+def request(flow: http.HTTPFlow) -> None:
+    # Verifica se é uma requisição de clique em um link
+    if (
+        "Referer" in flow.request.headers  # Tem cabeçalho Referer (indicando que veio de uma página anterior)
+        and flow.request.method == "GET"   # Método GET
+        and not flow.request.headers.get("Content-Type", "").startswith(("text/css", "image/", "application/javascript"))  # Exclui recursos secundários
+        and not any(ext in flow.request.pretty_url for ext in [".js", ".css", ".png", ".jpg", ".gif", ".ico", ".svg",".mp4"])  # Exclui recursos secundários
+    ):
+        # Loga a requisição de clique em um link
+        log_message = f"Data e Hora: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\n"
+        log_message += f"link: {flow.request.pretty_url}\n"
+        log_message += f"Referer: {flow.request.headers['Referer']}\n"
+        #log_message += f"Cabeçalho: {flow.request.headers}\n\n"
+        
+        # Escreve no arquivo request.txt
+        with open("$output_log", "a") as file:
+            file.write(log_message)
+        
+        # Exemplo de modificação da requisição
+        flow.request.headers["X-Link-Click"] = "True"
+EOF
+    chmod +777 "$filtro_py"
+    # Inicia o mitmproxy com o script de filtro
+    xterm -e "mitmproxy -s \"$filtro_py\" --set output_log=\"$output_log\"; exec bash &"& 
+    mitmproxy_pid=$!
+    echo $mitmproxy_pid > /tmp/mitmproxy_pid
+    zenity --info --text="Interceptação de endereços iniciada. PID: $mitmproxy_pid"
 }
-
 # Função para parar a interceptação de endereços
 parar_interceptacao() {
-    if [ -f /tmp/tinyproxy_pid ]; then
-        tinyproxy_pid=$(cat /tmp/tinyproxy_pid)
-    if [ -n "$tinyproxy_pid" ]; then
-        # Mata todos os processos filhos e zumbis
-        pkill -TERM -P $tinyproxy_pid
-        kill -9 $tinyproxy_pid
-        rm /tmp/tinyproxy_pid
-        zenity --info --text="Interceptação parada com sucesso."
+    if [ -f /tmp/mitmproxy_pid ]; then
+        mitmproxy_pid=$(cat /tmp/mitmproxy_pid)
+        if [ -n "$mitmproxy_pid" ]; then
+            kill $mitmproxy_pid
+            rm /tmp/mitmproxy_pid
+            zenity --info --text="Interceptação parada. Arquivo salvo em $output_log"
+        fi
     fi
-    fi
-       # Encerra o processo tail
-    tail_pid=$(pgrep -f "tail -f /var/log/tinyproxy/tinyproxy.log")
-    --zenity --info --text="Interceptação de endereços parada. PID: $tail_pid"
-    if [ -n "$tail_pid" ]; then
-        kill $tail_pid
-    fi
-  
-}
 
+    # Converte o arquivo de log em PDF com data e hora e exclui o arquivo de texto original
+    if [ -f "$output_log" ]; then
+        timestamp=$(date +"%Y%m%d_%H%M%S")
+        output_pdf="${output_log%.txt}_$timestamp.pdf"
+        pandoc "$output_log" -o "$output_pdf"
+        rm "$output_log"
+        zenity --info --text="Arquivo de log salvo como PDF: $output_pdf e arquivo de texto original excluído."
+    fi
+}
+criar_relatorio_navegacao() {
+    if [ -z "$pasta" ]; then
+        zenity --error --text="Nenhuma pasta selecionada. Selecione uma pasta primeiro."
+        return
+    fi
+
+    requisicao_file="$pasta/requests.txt"
+    if [ ! -f "$requisicao_file" ]; then
+        zenity --error --text="Arquivo requests.txt não encontrado na pasta de trabalho."
+        return
+    fi
+
+    pasta_saida=$(zenity --file-selection --directory --title="Selecione a pasta de saída do relatório")
+    if [ -z "$pasta_saida" ]; then
+        zenity --error --text="Nenhuma pasta selecionada. Saindo..."
+        return
+    fi
+
+    TEMP_FILE=$(mktemp /tmp/relatorio_navegacao.XXXXXX.html)
+    OUTPUT_FILE_PDF="$pasta_saida/relatorio_navegacao.pdf"
+
+    # Calcular o hash SHA-256 do arquivo requests.txt
+    hash=$(sha256sum "$requisicao_file" | awk '{print $1}')
+
+    # Cabeçalho do arquivo HTML
+    cat <<EOF > "$TEMP_FILE"
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<title>Relatório de Navegação na Internet</title>
+<style>
+body { font-family: Arial, sans-serif; }
+h2 { color: #2E8B57; }
+pre { background-color: #f4f4f4; padding: 10px; border: 1px solid #ddd; }
+</style>
+</head>
+<body>
+<h2>Relatório de Navegação na Internet</h2>
+<p>Este relatório contém informações sobre a navegação na internet capturadas pelo Odysseus SNAP.</p>
+<h2>Referência ao Arquivo requests.txt</h2>
+<p><strong>SHA-256 Hash:</strong> $hash</p>
+<h2>Detalhes da Navegação</h2>
+<pre>$(cat "$requisicao_file")</pre>
+</body>
+</html>
+EOF
+
+    # Converter o relatório para PDF usando wkhtmltopdf
+    wkhtmltopdf --enable-local-file-access "$TEMP_FILE" "$OUTPUT_FILE_PDF"
+
+    # Remover o arquivo temporário
+    rm "$TEMP_FILE"
+
+    # Informar ao usuário que o relatório foi gerado
+    zenity --info --text="Relatório de navegação gerado em $OUTPUT_FILE_PDF"
+
+    # Abrir o relatório PDF gerado com a aplicação padrão
+    xdg-open "$OUTPUT_FILE_PDF"
+    gravar_log "Criação de Relatório de Navegação" "$OUTPUT_FILE_PDF"
+}
+# Função para monitorar requests.txt em uma thread separada
+monitorar_requests() {
+    if [ -z "$pasta" ]; then
+        zenity --error --text="Nenhuma pasta selecionada. Selecione uma pasta primeiro."
+        return
+    fi
+
+    tail -f "$pasta/requests.txt" | zenity --text-info --title="Monitorar requests.txt" --width=800 --height=600 &
+    tail_pid=$!
+}
 # Configura o manipulador de sinal para encerrar o processo de monitoramento ao sair
-trap parar_interceptacao EXIT
+trap "parar_interceptacao; [ -n \"$tail_pid\" ] && kill $tail_pid" EXIT
 
 # Seleciona a pasta de trabalho
 selecionar_pasta
@@ -385,9 +474,10 @@ selecionar_pasta
 # Inicia a interceptação de endereços em uma thread
 interceptar_enderecos &
 
+
 # Interface gráfica principal
 while true; do
-    acao=$(zenity --list --title="Odysseus SNAP" --column="Ação" "Selecionar Pasta de Trabalho" "Capturar Área da Tela" "Gravar Tela" "Interceptar Endereços" "Abrir Pasta de Trabalho" "Criar Relatório em PDF" "Sair" --height=300 --width=400 --text="Selecione uma ação:" --cancel-label="Sair" --hide-header)
+    acao=$(zenity --list --title="Odysseus SNAP" --column="Ação" "Selecionar Pasta de Trabalho" "Capturar Área da Tela" "Gravar Tela" "Interceptar Endereços" "Abrir Pasta de Trabalho" "Criar Relatório Navegação" "Criar Relatório em PDF" "Monitorar requests.txt" "Sair" --height=300 --width=400 --text="Selecione uma ação:" --cancel-label="Sair" --hide-header)
     if [ $? -ne 0 ]; then
         break
     fi
@@ -402,16 +492,21 @@ while true; do
             gravar_tela
             ;;
         "Abrir Pasta de Trabalho")
-            abrir_pasta
+            xdg-open "$pasta"
+            ;;
+        "Criar Relatório Navegação")
+            criar_relatorio_navegacao
             ;;
         "Criar Relatório em PDF")
             criar_relatorio
-            ;;
+            ;;    
         "Interceptar Endereços")
             interceptar_enderecos
             ;;
+        "Monitorar requests.txt")
+              monitorar_requests
+            ;;
         "Sair")
-            parar_interceptacao EXIT
             break
             ;;
         *)
