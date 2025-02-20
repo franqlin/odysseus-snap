@@ -134,9 +134,146 @@ capturar_area() {
         echo "URL: $url"
     } >> "$pasta/odysseus_snap.log"
     gravar_log "Captura de Tela" "$screenshot_file \n $window_info \n JANELA: $url"
+    echo "CAPTURA DE TELA: $screenshot_file" >> "$pasta/report_build.txt"
 }
 
+relatorio_final() {
+    if [ -z "$pasta" ]; then
+        zenity --error --text="Nenhuma pasta selecionada. Selecione uma pasta primeiro."
+        return
+    fi
 
+    report_file="$pasta/report_build.txt"
+    if [ ! -f "$report_file" ]; then
+        zenity --error --text="Arquivo report_build.txt não encontrado na pasta de trabalho."
+        return
+    fi
+
+    pasta_saida=$(zenity --file-selection --directory --title="Selecione a pasta de saída do relatório final")
+    if [ -z "$pasta_saida" ]; then
+        zenity --error --text="Nenhuma pasta selecionada. Saindo..."
+        return
+    fi
+
+    TEMP_FILE=$(mktemp /tmp/relatorio_final.XXXXXX.html)
+    OUTPUT_FILE_PDF="$pasta_saida/relatorio_final.pdf"
+
+    # Cabeçalho do arquivo HTML
+    cat <<EOF > "$TEMP_FILE"
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<title>Relatório Final</title>
+<style>
+body { font-family: Arial, sans-serif; }
+h2 { color: #2E8B57; }
+pre { background-color: #f4f4f4; padding: 10px; border: 1px solid #ddd; }
+img { max-width: 100%; height: auto; }
+</style>
+</head>
+<body>
+<h1>Relatório Automático de Evidência(s) Digital(is) </h1>
+<h2>Informações do Sistema</h2>
+<pre>$(obter_info_sistema)</pre>
+<h2>Introdução Técnica</h2>
+<p>Este relatório foi gerado automaticamente pelo Odysseus SNAP, uma ferramenta de coleta de evidências digitais para investigações forenses. O relatório contém informações sobre arquivos, metadados e capturas de tela capturadas durante a investigação.além de aplicar funções hash conhecidas para garantir a integridade dos dados. </p>
+<h2>Funções Hash e Integridade</h2>
+<p>As funções hash são sequências alfanuméricas geradas por operações matemáticas e lógicas, produzindo um código de tamanho fixo que, em regra, é único para cada arquivo. Qualquer mínima alteração no arquivo resulta em um hash completamente diferente, garantindo a detecção de modificações.</p>
+<h2>Lista de Arquivos</h2>
+EOF
+
+    while IFS= read -r line; do
+        if [[ "$line" == URL:* ]]; then
+            url="${line#URL: }"
+            echo "<h2>URL: <a href=\"$url\">$url</a></h2>" >> "$TEMP_FILE"
+        elif [[ "$line" == CAPTURA\ DE\ TELA:* ]]; then
+            screenshot_file="${line#CAPTURA DE TELA: }"
+            exif_info=$(exiftool "$screenshot_file")
+            hash=$(sha256sum "$screenshot_file" | awk '{print $1}')
+            echo "<h3>$(basename "$screenshot_file")</h3>" >> "$TEMP_FILE"
+            if [[ "$screenshot_file" =~ \.mp4$ ]]; then
+                mkdir -p "$pasta/thumbnails"
+                thumbnail_file="$pasta/thumbnails/$(basename "${screenshot_file%.mp4}_thumbnail.png")"
+                ffmpeg -i "$screenshot_file" -ss 00:00:01.000 -vframes 1 "$thumbnail_file"
+                echo "<video controls style=\"width:300px;height:auto;\"><source src=\"file://$(realpath "$screenshot_file")\" type=\"video/mp4\"></video>" >> "$TEMP_FILE"
+                echo "<img src=\"file://$(realpath "$thumbnail_file")\" alt=\"Thumbnail\" style=\"width:300px;height:auto;\">" >> "$TEMP_FILE"
+                mkdir -p "$pasta_saida/imagens"
+                cp "$screenshot_file" "$pasta_saida/imagens/"
+            else
+                echo "<img src=\"file://$(realpath "$screenshot_file")\" alt=\"$(basename "$screenshot_file")\" style=\"width:300px;height:auto;\">" >> "$TEMP_FILE"
+                mkdir -p "$pasta_saida/imagens"
+                cp "$screenshot_file" "$pasta_saida/imagens/"
+                echo "<p><a href=\"file://$(realpath "./imagens/$(basename "$screenshot_file")")\">Clique aqui para acessar o arquivo</a></p>" >> "$TEMP_FILE"
+            fi
+            echo "<pre>$exif_info</pre>" >> "$TEMP_FILE"
+            echo "<p><strong>SHA256 Hash:</strong> $hash</p>" >> "$TEMP_FILE"
+            echo "<hr>" >> "$TEMP_FILE"
+        fi
+    done < "$report_file"
+
+    # Rodapé do arquivo HTML
+    echo "<h2>Logs de Navegação</h2>" >> "$TEMP_FILE"
+    echo "<p>Os logs de navegação são registros detalhados das atividades realizadas por um usuário em um navegador ou dispositivo. Eles incluem informações como URLs acessadas, horários de acesso, cookies, downloads e interações com páginas web. Sua importância para o OSINT pode ser resumida em:</p>" >> "$TEMP_FILE"
+    echo "<ul>" >> "$TEMP_FILE"
+    echo "<li><strong>Rastreamento de Atividades:</strong> Permitem identificar quais sites foram visitados, o tempo gasto em cada página e as ações realizadas, ajudando a traçar um perfil de comportamento do usuário.</li>" >> "$TEMP_FILE"
+    echo "<li><strong>Identificação de Padrões:</strong> Através da análise de logs, é possível detectar padrões de navegação, como horários de acesso frequentes ou preferências de conteúdo.</li>" >> "$TEMP_FILE"
+    echo "<li><strong>Investigação de Incidentes:</strong> Em casos de cibercrimes, os logs podem fornecer evidências sobre atividades suspeitas, como tentativas de acesso a sites maliciosos ou compartilhamento de informações sensíveis.</li>" >> "$TEMP_FILE"
+    echo "<li><strong>Coleta de Metadados:</strong> Informações como endereços IP, geolocalização e tipo de dispositivo podem ser extraídas dos logs, auxiliando na identificação de usuários ou sistemas.</li>" >> "$TEMP_FILE"
+    echo "</ul>" >> "$TEMP_FILE"
+    echo "<h2>Arquivos de Logs</h2>" >> "$TEMP_FILE"
+    echo "<table border=\"1\">" >> "$TEMP_FILE"
+    echo "<tr><th>Arquivo</th><th>Hash SHA-256</th></tr>" >> "$TEMP_FILE"
+    for log_file in "$pasta/requests.txt" "$pasta/odysseus_snap.log"; do
+        if [ -f "$log_file" ]; then
+            hash=$(sha256sum "$log_file" | awk '{print $1}')
+            echo "<tr><td>$(basename "$log_file")</td><td>$hash</td></tr>" >> "$TEMP_FILE"
+        fi
+    done
+    echo "</table>" >> "$TEMP_FILE"
+    # Rodapé do arquivo HTML
+echo "<h2>Funções Hash e Integridade</h2>" >> "$TEMP_FILE"
+echo "<p>As funções hash são sequências alfanuméricas geradas por operações matemáticas e lógicas, produzindo um código de tamanho fixo que, em regra, é único para cada arquivo. Qualquer mínima alteração no arquivo resulta em um hash completamente diferente, garantindo a detecção de modificações.</p>" >> "$TEMP_FILE"
+echo "<h2>Referências Técnicas</h2>" >> "$TEMP_FILE"
+echo "<ol>" >> "$TEMP_FILE"
+echo "<li><strong>Vecchia, Evandro Dalla.</strong> <em>Perícia Digital. Da Investigação à Análise Forense.</em> 2ª edição. Campinas: SP - Millennium Editora Ltda, 2019.</li>" >> "$TEMP_FILE"
+echo "<li><strong>Eleutério, Pedro Monteiro da Silva e Machado, Márcio Pereira.</strong> <em>Desvendando a Computação Forense.</em> 1ª Edição. São Paulo: SP - Novatec Editora Ltda, 2011.</li>" >> "$TEMP_FILE"
+echo "<li><strong>Velho, Jesus Antônio.</strong> <em>Tratado da Computação Forense.</em> 1ª Edição. Campinas: SP - Millennium Editora Ltda, 2016.</li>" >> "$TEMP_FILE"
+echo "<li><strong>STJ, AgRg no HC 828054/RN.</strong> Julgado em 23/04/2024.</li>" >> "$TEMP_FILE"
+echo "</ol>" >> "$TEMP_FILE"
+cat <<EOF >> "$TEMP_FILE"
+</body>
+</html>
+EOF
+
+    # Converter o relatório para PDF usando wkhtmltopdf
+    wkhtmltopdf --enable-local-file-access "$TEMP_FILE" "$OUTPUT_FILE_PDF"
+
+    # Remover o arquivo temporário
+    rm "$TEMP_FILE"
+
+    # Informar ao usuário que o relatório foi gerado
+    zenity --info --text="Relatório final gerado em $OUTPUT_FILE_PDF"
+     
+    # Criar as pastas de saída
+    #mkdir -p "$pasta_saida/imagens"
+    #mkdir -p "$pasta_saida/videos"
+    mkdir -p "$pasta_saida/logs"
+
+    # Copiar arquivos para as respectivas pastas
+    cp "$pasta"/*.png "$pasta_saida/imagens/"
+    cp "$pasta"/*.mp4 "$pasta_saida/videos/"
+    cp "$pasta/requests.txt" "$pasta_saida/logs/"
+    cp "$pasta/odysseus_snap.log" "$pasta_saida/logs/"
+    # Copiar arquivos *.png, *.mp4, requests.txt, odysseus_snap.log para a pasta do relatório
+    # Renomear a pasta de thumbs para thumbs_old
+    if [ -d "$pasta/thumbnails" ]; then
+        mv "$pasta/thumbnails" "$pasta/thumbnails_old"
+    fi
+    # Abrir o relatório PDF gerado com a aplicação padrão
+    xdg-open "$OUTPUT_FILE_PDF"
+    gravar_log "Criação de Relatório Final" "$OUTPUT_FILE_PDF"
+}
 # Função para gravar a tela
 gravar_tela() {
     if [ -z "$pasta" ]; then
@@ -186,6 +323,7 @@ gravar_tela() {
                 echo "$window_info"
             } >> "$pasta/odysseus_snap.log"
             gravar_log "Gravação de Tela" "$pasta/screencast_$i.mp4 \n $window_info \n JANELA: $window_name"
+            echo "CAPTURA DE TELA: $pasta/screencast_$i.mp4" >> "$pasta/report_build.txt"
             break
         fi
     done
@@ -372,7 +510,7 @@ EOF
     xterm -e "mitmproxy -s \"$filtro_py\" --set output_log=\"$output_log\"; exec bash &"& 
     mitmproxy_pid=$!
     echo $mitmproxy_pid > /tmp/mitmproxy_pid
-    zenity --info --text="Interceptação de endereços iniciada. PID: $mitmproxy_pid"
+    #zenity --info --text="Interceptação de endereços iniciada. PID: $mitmproxy_pid"
 }
 # Função para parar a interceptação de endereços
 parar_interceptacao() {
@@ -381,18 +519,23 @@ parar_interceptacao() {
         if [ -n "$mitmproxy_pid" ]; then
             kill $mitmproxy_pid
             rm /tmp/mitmproxy_pid
-            zenity --info --text="Interceptação parada. Arquivo salvo em $output_log"
+            #zenity --info --text="Interceptação parada. Arquivo salvo em $output_log"
         fi
     fi
-
-    # Converte o arquivo de log em PDF com data e hora e exclui o arquivo de texto original
-    if [ -f "$output_log" ]; then
-        timestamp=$(date +"%Y%m%d_%H%M%S")
-        output_pdf="${output_log%.txt}_$timestamp.pdf"
-        pandoc "$output_log" -o "$output_pdf"
-        rm "$output_log"
-        zenity --info --text="Arquivo de log salvo como PDF: $output_pdf e arquivo de texto original excluído."
-    fi
+# Fecha a instância aberta do Firefox
+if pgrep firefox > /dev/null; then
+    pkill firefox
+    #zenity --info --text="Instância do Firefox fechada."
+fi
+if  pgrep tail > /dev/null; then
+    pkill tail
+    #zenity --info --text="Instância do Firefox fechada."
+fi
+if pgrep zenity > /dev/null; then
+    pkill zenity
+    echo
+fi
+      
 }
 criar_relatorio_navegacao() {
     if [ -z "$pasta" ]; then
@@ -465,6 +608,31 @@ monitorar_requests() {
     tail -f "$pasta/requests.txt" | zenity --text-info --title="Monitorar requests.txt" --width=800 --height=600 &
     tail_pid=$!
 }
+abrir_url() {
+    url=$(zenity --entry --title="Abrir URL" --text="Digite a URL que deseja abrir:")
+    if [ -n "$url" ]; then
+        firefox --new-tab "$url"
+        echo "URL: $url" >> "$pasta/report_build.txt"
+        zenity --info --text="URL aberta em uma nova aba do Firefox."
+    else
+        zenity --error --text="Nenhuma URL fornecida."
+    fi
+}
+fechar_e_abrir_firefox() {
+    # Verifica se há instâncias do Firefox em execução
+    if pgrep firefox > /dev/null; then
+        # Fecha todas as instâncias do Firefox
+        pkill firefox
+        zenity --info --text="Todas as instâncias do Firefox foram fechadas."
+    fi
+
+    # Abre uma nova sessão do Firefox sem abas abertas
+    firefox --new-instance --no-remote about:blank &
+    # Cria o arquivo requests.txt na pasta de trabalho e escreve a primeira linha
+    echo "Relatório de Requisição" > "$pasta/requests.txt"
+     echo "" > "$pasta/report_build.txt"
+    zenity --info --text="Nova sessão do Firefox iniciada."
+}
 # Configura o manipulador de sinal para encerrar o processo de monitoramento ao sair
 trap "parar_interceptacao; [ -n \"$tail_pid\" ] && kill $tail_pid" EXIT
 
@@ -473,17 +641,19 @@ selecionar_pasta
 
 # Inicia a interceptação de endereços em uma thread
 interceptar_enderecos &
+# Inicia o monitoramento do arquivo requests.txt em uma thread
+fechar_e_abrir_firefox
 
 
 # Interface gráfica principal
 while true; do
-    acao=$(zenity --list --title="Odysseus SNAP" --column="Ação" "Selecionar Pasta de Trabalho" "Capturar Área da Tela" "Gravar Tela" "Interceptar Endereços" "Abrir Pasta de Trabalho" "Criar Relatório Navegação" "Criar Relatório em PDF" "Monitorar requests.txt" "Sair" --height=300 --width=400 --text="Selecione uma ação:" --cancel-label="Sair" --hide-header)
+    acao=$(zenity --list --title="Odysseus SNAP" --column="Ação"  "Capturar Área da Tela" "Gravar Tela"  "Abrir Pasta de Trabalho" "Registrar Endereços" "Criar Relatório em PDF" "Monitorar requests.txt" "Sair" --height=300 --width=400 --text="Selecione uma ação:" --cancel-label="Sair" --hide-header)
     if [ $? -ne 0 ]; then
         break
     fi
     case $acao in
-        "Selecionar Pasta de Trabalho")
-            selecionar_pasta
+        "Registrar Endereços")
+            abrir_url
             ;;
         "Capturar Área da Tela")
             capturar_area
@@ -498,14 +668,14 @@ while true; do
             criar_relatorio_navegacao
             ;;
         "Criar Relatório em PDF")
-            criar_relatorio
+            relatorio_final
             ;;    
         "Interceptar Endereços")
             interceptar_enderecos
             ;;
         "Monitorar requests.txt")
               monitorar_requests
-            ;;
+            ;;    
         "Sair")
             break
             ;;
