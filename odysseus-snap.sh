@@ -191,107 +191,118 @@ relatorio_final() {
         return
     fi
 
-    TEMP_FILE="$pasta/relatorio_final.html"
+    TEMP_FILE="$pasta/relatorio_final.md"
     OUTPUT_FILE_PDF="$pasta_saida/relatorio_final.pdf"
 
-    # Cabeçalho do arquivo HTML
+    # Cabeçalho do arquivo Markdown
     cat <<EOF > "$TEMP_FILE"
-<!DOCTYPE html>
-<html lang="pt-BR">
-<head>
-<meta charset="UTF-8">
-<title>Relatório Final</title>
-<style>
-body { font-family: Arial, sans-serif; }
-h2 { color: #2E8B57; }
-pre { background-color: #f4f4f4; padding: 10px; border: 1px solid #ddd; }
-img { max-width: 100%; height: auto; }
-</style>
-</head>
-<body>
-<h1>Relatório Automático de Evidência(s) Digital(is) </h1>
-<h2>Informações do Sistema</h2>
-<pre>$(obter_info_sistema)</pre>
-<h2>Introdução Técnica</h2>
-<p>Este relatório foi gerado automaticamente pelo Odysseus SNAP, uma ferramenta de coleta de evidências digitais para investigações forenses. O relatório contém informações sobre arquivos, metadados e capturas de tela capturadas durante a investigação.além de aplicar funções hash conhecidas para garantir a integridade dos dados. </p>
-<h2>Funções Hash e Integridade</h2>
-<p>As funções hash são sequências alfanuméricas geradas por operações matemáticas e lógicas, produzindo um código de tamanho fixo que, em regra, é único para cada arquivo. Qualquer mínima alteração no arquivo resulta em um hash completamente diferente, garantindo a detecção de modificações.</p>
-<h2>Lista de Arquivos</h2>
+---
+title: "Relatório Final"
+author: "Odysseus SNAP"
+date: "$(date)"
+geometry: margin=1in
+---
+
+# Relatório Automático de Evidência(s) Digital(is)
+
+## Informações do Sistema
+\`\`\`
+$(obter_info_sistema)
+\`\`\`
+
+## Introdução Técnica
+Este relatório foi gerado automaticamente pelo Odysseus SNAP, uma ferramenta de coleta de evidências digitais para investigações forenses. O relatório contém informações sobre arquivos, metadados e capturas de tela capturadas durante a investigação, além de aplicar funções hash conhecidas para garantir a integridade dos dados.
+
+## Funções Hash e Integridade
+As funções hash são sequências alfanuméricas geradas por operações matemáticas e lógicas, produzindo um código de tamanho fixo que, em regra, é único para cada arquivo. Qualquer mínima alteração no arquivo resulta em um hash completamente diferente, garantindo a detecção de modificações.
+
+## Lista de Arquivos
 EOF
 while IFS= read -r line || [[ -n "$line" ]]; do
     if [[ "$line" == URL:* ]]; then
         url="${line#URL: }"
-        echo "<h2>URL: <a href=\"$url\">$url</a></h2>" >> "$TEMP_FILE"
+        echo "### URL: [$url]($url)" >> "$TEMP_FILE"
     elif [[ "$line" == CAPTURA\ DE\ TELA:* ]]; then
         screenshot_file="${line#CAPTURA DE TELA: }"
         exif_info=$(exiftool "$screenshot_file")
         hash=$(sha256sum "$screenshot_file" | awk '{print $1}')
-        echo "<h3>$(basename "$screenshot_file")</h3>" >> "$TEMP_FILE"
+        echo "#### $(basename "$screenshot_file")" >> "$TEMP_FILE"
         if [[ "$screenshot_file" =~ \.mp4$ ]]; then
             mkdir -p "$pasta/thumbnails"
             thumbnail_file="$pasta/thumbnails/$(basename "${screenshot_file%.mp4}_thumbnail.png")"
-            ffmpeg -i "$screenshot_file" -ss 00:00:02.000 -vframes 1 "$thumbnail_file"
-            echo "<img src=\"file://$(realpath "$thumbnail_file")\" alt=\"Thumbnail\" style=\"width:300px;height:auto;\">" >> "$TEMP_FILE"
+            ffmpeg -i "$screenshot_file" -ss 00:00:01.000 -vframes 1 "$thumbnail_file"
+            echo "| ![Imagem](file://$(realpath "$thumbnail_file")) |" >> "$TEMP_FILE"
+            echo "|:--:|" >> "$TEMP_FILE"
+            echo "{ width=50% }" >> "$TEMP_FILE"
             mkdir -p "$pasta_saida/videos"
             cp "$screenshot_file" "$pasta_saida/videos/"
+            echo "[Clique aqui para acessar o arquivo](./videos/$(basename "$screenshot_file"))" >> "$TEMP_FILE"
         else
-            echo "<img src=\"file://$(realpath "$screenshot_file")\" alt=\"$(basename "$screenshot_file")\" style=\"width:300px;height:auto;\">" >> "$TEMP_FILE"
+            echo "| ![Imagem](file://$(realpath "$screenshot_file")) |" >> "$TEMP_FILE"
+            echo "|:--:|" >> "$TEMP_FILE"
             mkdir -p "$pasta_saida/imagens"
             cp "$screenshot_file" "$pasta_saida/imagens/"
-            echo "<p><a href=\"/imagens/$(basename "$screenshot_file")\">Clique aqui para acessar o arquivo</a></p>" >> "$TEMP_FILE"
+            echo "[Clique aqui para acessar o arquivo](./imagens/$(basename "$screenshot_file"))" >> "$TEMP_FILE"
         fi
-        echo "<pre>$exif_info</pre>" >> "$TEMP_FILE"
-        echo "<p><strong>SHA256 Hash:</strong> $hash</p>" >> "$TEMP_FILE"
-        echo "<hr>" >> "$TEMP_FILE"
+        echo "\`\`\`" >> "$TEMP_FILE"
+        echo "| Campo | Valor |" >> "$TEMP_FILE"
+        echo "|-------|-------|" >> "$TEMP_FILE"
+        echo "$exif_info" | while IFS= read -r line; do
+            field=$(echo "$line" | cut -d ':' -f 1)
+            value=$(echo "$line" | cut -d ':' -f 2-)
+            echo "| $field | $value |" >> "$TEMP_FILE"
+        done
+        echo "\`\`\`" >> "$TEMP_FILE"
+        echo "**SHA256 Hash:** $hash" >> "$TEMP_FILE"
+        echo "---" >> "$TEMP_FILE"
     fi
 done < <(cat "$report_file"; echo)
 
-    # Rodapé do arquivo HTML
-    echo "<h2>Logs de Navegação</h2>" >> "$TEMP_FILE"
-    echo "<p>Os logs de navegação são registros detalhados das atividades realizadas por um usuário em um navegador ou dispositivo. Eles incluem informações como URLs acessadas, horários de acesso, cookies, downloads e interações com páginas web. Sua importância para o OSINT pode ser resumida em:</p>" >> "$TEMP_FILE"
-    echo "<ul>" >> "$TEMP_FILE"
-    echo "<li><strong>Rastreamento de Atividades:</strong> Permitem identificar quais sites foram visitados, o tempo gasto em cada página e as ações realizadas, ajudando a traçar um perfil de comportamento do usuário.</li>" >> "$TEMP_FILE"
-    echo "<li><strong>Identificação de Padrões:</strong> Através da análise de logs, é possível detectar padrões de navegação, como horários de acesso frequentes ou preferências de conteúdo.</li>" >> "$TEMP_FILE"
-    echo "<li><strong>Investigação de Incidentes:</strong> Em casos de cibercrimes, os logs podem fornecer evidências sobre atividades suspeitas, como tentativas de acesso a sites maliciosos ou compartilhamento de informações sensíveis.</li>" >> "$TEMP_FILE"
-    echo "<li><strong>Coleta de Metadados:</strong> Informações como endereços IP, geolocalização e tipo de dispositivo podem ser extraídas dos logs, auxiliando na identificação de usuários ou sistemas.</li>" >> "$TEMP_FILE"
-    echo "</ul>" >> "$TEMP_FILE"
-    echo "<h2>Arquivos de Logs</h2>" >> "$TEMP_FILE"
-    echo "<table border=\"1\">" >> "$TEMP_FILE"
-    echo "<tr><th>Arquivo</th><th>Hash SHA-256</th></tr>" >> "$TEMP_FILE"
+    # Rodapé do arquivo Markdown
+    cat <<EOF >> "$TEMP_FILE"
+
+## Logs de Navegação
+Os logs de navegação são registros detalhados das atividades realizadas por um usuário em um navegador ou dispositivo. Eles incluem informações como URLs acessadas, horários de acesso, cookies, downloads e interações com páginas web. Sua importância para o OSINT pode ser resumida em:
+
+- **Rastreamento de Atividades:** Permitem identificar quais sites foram visitados, o tempo gasto em cada página e as ações realizadas, ajudando a traçar um perfil de comportamento do usuário.
+- **Identificação de Padrões:** Através da análise de logs, é possível detectar padrões de navegação, como horários de acesso frequentes ou preferências de conteúdo.
+- **Investigação de Incidentes:** Em casos de cibercrimes, os logs podem fornecer evidências sobre atividades suspeitas, como tentativas de acesso a sites maliciosos ou compartilhamento de informações sensíveis.
+- **Coleta de Metadados:** Informações como endereços IP, geolocalização e tipo de dispositivo podem ser extraídas dos logs, auxiliando na identificação de usuários ou sistemas.
+
+## Arquivos de Logs
+| Arquivo | Hash SHA-256 |
+|---------|--------------|
+EOF
+
     for log_file in "$pasta/requests.txt" "$pasta/odysseus_snap.log"; do
         if [ -f "$log_file" ]; then
             hash=$(sha256sum "$log_file" | awk '{print $1}')
-            echo "<tr><td>$(basename "$log_file")</td><td>$hash</td></tr>" >> "$TEMP_FILE"
+            echo "| $(basename "$log_file") | $hash |" >> "$TEMP_FILE"
         fi
     done
-    echo "</table>" >> "$TEMP_FILE"
-    # Rodapé do arquivo HTML
-echo "<h2>Funções Hash e Integridade</h2>" >> "$TEMP_FILE"
-echo "<p>As funções hash são sequências alfanuméricas geradas por operações matemáticas e lógicas, produzindo um código de tamanho fixo que, em regra, é único para cada arquivo. Qualquer mínima alteração no arquivo resulta em um hash completamente diferente, garantindo a detecção de modificações.</p>" >> "$TEMP_FILE"
-echo "<h2>Referências Técnicas</h2>" >> "$TEMP_FILE"
-echo "<ol>" >> "$TEMP_FILE"
-echo "<li><strong>Vecchia, Evandro Dalla.</strong> <em>Perícia Digital. Da Investigação à Análise Forense.</em> 2ª edição. Campinas: SP - Millennium Editora Ltda, 2019.</li>" >> "$TEMP_FILE"
-echo "<li><strong>Eleutério, Pedro Monteiro da Silva e Machado, Márcio Pereira.</strong> <em>Desvendando a Computação Forense.</em> 1ª Edição. São Paulo: SP - Novatec Editora Ltda, 2011.</li>" >> "$TEMP_FILE"
-echo "<li><strong>Velho, Jesus Antônio.</strong> <em>Tratado da Computação Forense.</em> 1ª Edição. Campinas: SP - Millennium Editora Ltda, 2016.</li>" >> "$TEMP_FILE"
-echo "<li><strong>STJ, AgRg no HC 828054/RN.</strong> Julgado em 23/04/2024.</li>" >> "$TEMP_FILE"
-echo "</ol>" >> "$TEMP_FILE"
-cat <<EOF >> "$TEMP_FILE"
-</body>
-</html>
+
+    cat <<EOF >> "$TEMP_FILE"
+
+## Referências Técnicas
+1. **Vecchia, Evandro Dalla.** *Perícia Digital. Da Investigação à Análise Forense.* 2ª edição. Campinas: SP - Millennium Editora Ltda, 2019.
+2. **Eleutério, Pedro Monteiro da Silva e Machado, Márcio Pereira.** *Desvendando a Computação Forense.* 1ª Edição. São Paulo: SP - Novatec Editora Ltda, 2011.
+3. **Velho, Jesus Antônio.** *Tratado da Computação Forense.* 1ª Edição. Campinas: SP - Millennium Editora Ltda, 2016.
+4. **STJ, AgRg no HC 828054/RN.** Julgado em 23/04/2024.
+
 EOF
 
-    # Converter o relatório para PDF usando wkhtmltopdf
-    wkhtmltopdf --enable-local-file-access "$TEMP_FILE" "$OUTPUT_FILE_PDF"
+    # Converter o relatório para PDF usando pandoc
+    pandoc "$TEMP_FILE" -o "$OUTPUT_FILE_PDF" --pdf-engine=xelatex
 
     # Remover o arquivo temporário
-    mv "$TEMP_FILE" "$pasta/relatorio_final_$(date +"%Y%m%d_%H%M%S").html"
+    mv "$TEMP_FILE" "$pasta/relatorio_final_$(date +"%Y%m%d_%H%M%S").md"
 
     # Informar ao usuário que o relatório foi gerado
     zenity --info --text="Relatório final gerado em $OUTPUT_FILE_PDF"
      
     # Criar as pastas de saída
-    #mkdir -p "$pasta_saida/imagens"
-    #mkdir -p "$pasta_saida/videos"
+    mkdir -p "$pasta_saida/imagens"
+    mkdir -p "$pasta_saida/videos"
     mkdir -p "$pasta_saida/logs"
 
     # Copiar arquivos para as respectivas pastas
@@ -299,11 +310,12 @@ EOF
     cp "$pasta"/*.mp4 "$pasta_saida/videos/"
     cp "$pasta/requests.txt" "$pasta_saida/logs/"
     cp "$pasta/odysseus_snap.log" "$pasta_saida/logs/"
-    # Copiar arquivos *.png, *.mp4, requests.txt, odysseus_snap.log para a pasta do relatório
+
     # Renomear a pasta de thumbs para thumbs_old
     if [ -d "$pasta/thumbnails" ]; then
         mv "$pasta/thumbnails" "$pasta/thumbnails_old"
     fi
+
     # Abrir o relatório PDF gerado com a aplicação padrão
     xdg-open "$OUTPUT_FILE_PDF"
     gravar_log "Criação de Relatório Final" "$OUTPUT_FILE_PDF"
