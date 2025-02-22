@@ -224,7 +224,9 @@ th { background-color: #f2f2f2; }
     Av. Marechal Câmara, 350/8º andar, Centro, Rio de Janeiro – RJ.<br>
     Telefones: 2292-8459 / 2550-1010 - e-mail: <a href="mailto:deic.csi@mprj.mp.br">deic.csi@mprj.mp.br</a>
 </div>
-<hr>
+<div style="text-align: right;">
+    <p><strong>Rio de Janeiro,</strong> $(date +"%d de %B de %Y")</p>
+</div>
 <br>
 <div style="text-align: left; font-family: monospace; line-height: 1.2;">
     <p><strong>Referência:</strong> 0802185-58.2024.8.19.0025</p>
@@ -292,6 +294,24 @@ done < <(cat "$report_file"; echo)
     # Rodapé do arquivo HTML
 echo "<h2>Funções Hash e Integridade</h2>" >> "$TEMP_FILE"
 echo "<p>As funções hash são sequências alfanuméricas geradas por operações matemáticas e lógicas, produzindo um código de tamanho fixo que, em regra, é único para cada arquivo. Qualquer mínima alteração no arquivo resulta em um hash completamente diferente, garantindo a detecção de modificações.</p>" >> "$TEMP_FILE"
+cat <<EOF >> "$TEMP_FILE"
+<h2>Ferramentas Utilizadas</h2>
+<p>Este projeto utiliza diversas ferramentas para realizar a coleta e análise de dados. Abaixo está uma descrição técnica de cada uma delas:</p>
+<ul>
+    <li><strong>scrot:</strong> Uma ferramenta de linha de comando para capturar screenshots. <a href="https://github.com/resurrecting-open-source-projects/scrot">Repositório</a></li>
+    <li><strong>zenity:</strong> Uma ferramenta que permite exibir caixas de diálogo gráficas a partir de scripts de shell. <a href="https://github.com/ncruces/zenity">Repositório</a></li>
+    <li><strong>ffmpeg:</strong> Um framework completo para gravar, converter e transmitir áudio e vídeo. <a href="https://github.com/FFmpeg/FFmpeg">Repositório</a></li>
+    <li><strong>ImageMagick:</strong> Um software para criar, editar, compor ou converter imagens bitmap. <a href="https://github.com/ImageMagick/ImageMagick">Repositório</a></li>
+    <li><strong>exiftool:</strong> Uma ferramenta de linha de comando para leitura, escrita e edição de metadados em arquivos. <a href="https://github.com/exiftool/exiftool">Repositório</a></li>
+    <li><strong>pandoc:</strong> Um conversor universal de documentos. <a href="https://github.com/jgm/pandoc">Repositório</a></li>
+    <li><strong>slop:</strong> Uma ferramenta para selecionar áreas da tela. <a href="https://github.com/naelstrof/slop">Repositório</a></li>
+    <li><strong>maim:</strong> Uma ferramenta de captura de tela. <a href="https://github.com/naelstrof/maim">Repositório</a></li>
+    <li><strong>xclip:</strong> Uma ferramenta de linha de comando para interagir com a área de transferência X. <a href="https://github.com/astrand/xclip">Repositório</a></li>
+    <li><strong>tinyproxy:</strong> Um proxy HTTP leve. <a href="https://github.com/tinyproxy/tinyproxy">Repositório</a></li>
+    <li><strong>mitmproxy:</strong> Um proxy HTTP/HTTPS interativo para depuração e análise de tráfego. <a href="https://github.com/mitmproxy/mitmproxy">Repositório</a></li>
+    <li><strong>wkhtmltopdf:</strong> Uma ferramenta para converter HTML em PDF usando Webkit. <a href="https://github.com/wkhtmltopdf/wkhtmltopdf">Repositório</a></li>
+</ul>
+EOF
 echo "<h2>Referências Técnicas</h2>" >> "$TEMP_FILE"
 echo "<ol>" >> "$TEMP_FILE"
 echo "<li><strong>ISO/IEC 27037:2012.</strong> <em>Information technology — Security techniques — Guidelines for identification, collection, acquisition, and preservation of digital evidence.</em></li>" >> "$TEMP_FILE"
@@ -317,6 +337,10 @@ EOF
      --footer-font-size 8 \
      --footer-spacing 5 \
      --footer-line \
+     --margin-top "20mm" \
+     --margin-bottom "20mm" \
+     --margin-left "20mm" \
+     --margin-right "20mm" \
      "$TEMP_FILE" "$OUTPUT_FILE_PDF"
      #--header-center "$cabecalho" \
 
