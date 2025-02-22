@@ -10,3 +10,4 @@ HEADER_CENTER="COORDENADORIA DE SEGURANÇA E INTELIGÊNCIA\nDIVISÃO ESPECIAL DE
 # Outras variáveis
 TEMP_FILE="$pasta/relatorio_final.html"
 OUTPUT_FILE_PDF="$pasta_saida/relatorio_final.pdf"
+#other
