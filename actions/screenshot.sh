@@ -1,17 +1,4 @@
-# 
-salvar_dados_tabela() {
-        local filename="$1"
-        local basepath="$2"
-        local hash="$3"
-        local description="$4"
-        local type="$5"
-        
-        # Comando SQL para inserir os dados na tabela screenshot
-        sqlite3 $pasta/screencaption-db.db <<EOF
-INSERT INTO screencaption (filename, basepath, hash, description,type)
-VALUES ('$filename','$basepath', '$hash', '$description', '$type');
-EOF
-}
+
 # Função para capturar uma área da tela
 capturar_area() {
     if [ -z "$pasta" ]; then
@@ -61,6 +48,7 @@ capturar_area() {
     hash=$(sha256sum "$screenshot_file" | awk '{print $1}')
     
     echo "Hash: $hash"
+    
     
     # Salva os dados na tabela screenshot
     salvar_dados_tabela "$screenshot_file" "$(basename $screenshot_file)" "$hash" "$description" "1"
