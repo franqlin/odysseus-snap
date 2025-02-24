@@ -1,3 +1,18 @@
+# Função para criar a tabela screencaption no banco de dados screencaption-db
+criar_tabela_screencaption() {
+    db_path="$pasta/screencaption-db.db"
+    sqlite3 "$db_path" <<EOF
+CREATE TABLE IF NOT EXISTS screencaption (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    filename TEXT NOT NULL,
+    basepath TEXT NOT NULL,
+    hash TEXT NOT NULL,
+    description TEXT,
+    type TEXT NOT NULL
+);
+EOF
+    echo "Tabela screencaption criada no banco de dados screencaption-db.db."
+}
 
 # Função para selecionar a pasta de trabalho
 selecionar_pasta() {
@@ -15,7 +30,7 @@ selecionar_pasta() {
         exit 1
     fi
     #echo "Pasta selecionada: $pasta"
-
+     
     if [ ! -f "$session_file" ]; then
         # Cria o arquivo se não existir
         touch "$session_file"
@@ -26,6 +41,14 @@ selecionar_pasta() {
             touch "$report_file"
             echo "Arquivo report_build.txt criado."
         fi
+        # Verifica se o banco de dados screencaption-db.db existe
+        db_path="$pasta/screencaption-db.db"
+        if [ ! -f "$db_path" ]; then
+            criar_tabela_screencaption
+        fi
+       
+        
+
     else
         # Verifica se o arquivo contém a linha "closedsession"
         if grep -q "closedsession:" "$session_file"; then

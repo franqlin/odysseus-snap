@@ -13,7 +13,7 @@ abrir_url() {
     url=$(zenity --entry --title="Abrir URL" --text="Digite a URL que deseja abrir:")
     if [ -n "$url" ]; then
         firefox --new-tab "$url"
-        echo "URL__: $url" >> "$pasta/report_build.txt"
+        echo "$url" >> "$pasta/report_build.txt"
         zenity --info --text="URL aberta em uma nova aba do Firefox."
     else
         zenity --error --text="Nenhuma URL fornecida."

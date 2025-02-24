@@ -32,7 +32,7 @@ relatorio_final() {
 <style>
 body { font-family: Arial, sans-serif; }
 h2 { color: #782c24; }
-pre { background-color: #f4f4f4; padding: 10px; border: 1px solid #ddd; }
+pre { background-color: #f4f4f4; padding: 10px; border: 1px solid #ddd; overflow-x: auto; }
 img { max-width: 100%; height: auto; }
 table { border-collapse: collapse; width: 100%; }
 table, th, td { border: 1px solid black; }
@@ -66,35 +66,40 @@ th { background-color: #f2f2f2; }
 <p>As funções hash são sequências alfanuméricas geradas por operações matemáticas e lógicas, produzindo um código de tamanho fixo que, em regra, é único para cada arquivo. Qualquer mínima alteração no arquivo resulta em um hash completamente diferente, garantindo a detecção de modificações.</p>
 <h2>Lista de Arquivos</h2>
 EOF
-while IFS= read -r line || [[ -n "$line" ]]; do
-    if [[ "$line" == URL__:* ]]; then
-        url="${line#URL__: }"
-        echo "<h2>URL: <a href=\"$url\">$url</a></h2>" >> "$TEMP_FILE"
-    elif [[ "$line" == CAPTURA_DE_TELA__:* ]]; then
-        screenshot_file="${line#CAPTURA_DE_TELA__: }"
-        exif_info=$(exiftool "$screenshot_file")
-        hash=$(sha256sum "$screenshot_file" | awk '{print $1}')
-        echo "<h3>Nome do Arquivo: $(basename "$screenshot_file")</h3>" >> "$TEMP_FILE"
-        if [[ "$screenshot_file" =~ \.mp4$ ]]; then
+while IFS="|" read -r filename basepath hash description type; do
+
+   
+        exif_info=$(exiftool "$filename")
+        echo "<h3>Nome do Arquivo: $basepath</h3>" >> "$TEMP_FILE"
+        if [[ "$type" -eq 2 ]]; then
             mkdir -p "$pasta_saida/thumbnails"
-            thumbnail_file="$pasta_saida/thumbnails/$(basename "${screenshot_file%.mp4}_thumbnail.png")"
+            thumbnail_file="$pasta_saida/thumbnails/$($basepath "${screenshot_file%.mp4}_thumbnail.png")"
             
             #ffmpeg -i "$screenshot_file" -ss 00:00:01.000 -vframes 1 "$thumbnail_file"
             echo "<img src=\"https://img.icons8.com/ios-filled/50/000000/video.png\" alt=\"Thumbnail\" style=\"width:50px;height:auto;\">" >> "$TEMP_FILE"
             mkdir -p "$pasta_saida/videos"
-            cp "$screenshot_file" "$pasta_saida/videos/"
-            echo "<p><a href=\"./videos/$(basename "$screenshot_file")\">Clique aqui para acessar o arquivo</a></p>" >> "$TEMP_FILE"
+            cp "$filename" "$pasta_saida/videos/"
+            echo "<p><a href=\"./videos/$($basepath)\">Clique aqui para acessar o arquivo</a></p>" >> "$TEMP_FILE"
         else
-            echo "<img src=\"file://$(realpath "$screenshot_file")\" alt=\"$(basename "$screenshot_file")\" style=\"width:300px;height:auto;\">" >> "$TEMP_FILE"
+            echo "<img src=\"file://$(realpath "$filename")\" alt=\"$(basename "$filename")\" style=\"width:300px;height:auto;\">" >> "$TEMP_FILE"
             mkdir -p "$pasta_saida/imagens"
-            cp "$screenshot_file" "$pasta_saida/imagens/"
-            echo "<p><a href=\"./imagens/$(basename "$screenshot_file")\">Clique aqui para acessar o arquivo</a></p>" >> "$TEMP_FILE"
+            cp "$filename" "$pasta_saida/imagens/"
+            echo "<p><a href=\"./imagens/$(basename "$filename")\"><img src=\"https://img.icons8.com/ios-filled/50/000000/link.png\" alt=\"Link\" style=\"width:20px;height:auto;\"></a></p>" >> "$TEMP_FILE"
         fi
-        echo "<pre>$exif_info</pre>" >> "$TEMP_FILE"
+
+        echo "<p><strong>Descrição:</strong> $description</p>" >> "$TEMP_FILE"
+
+        echo "<h4>Metadados:</h4>" >> "$TEMP_FILE"
+        echo "<table style=\"width: 100%; font-family: monospace; font-size: 12px;\">" >> "$TEMP_FILE"
+        echo "<tr><th style=\"border: 1px solid #ddd; padding: 10px; background-color: #f2f2f2;\">Tag</th><th style=\"border: 1px solid #ddd; padding: 10px; background-color: #f2f2f2;\">Value</th></tr>" >> "$TEMP_FILE"
+        while IFS=" : " read -r tag value; do
+            echo "<tr><td style=\"border: 1px solid #ddd; padding: 10px;\">$tag</td><td style=\"border: 1px solid #ddd; padding: 10px;\">$value</td></tr>" >> "$TEMP_FILE"
+        done <<< "$exif_info"
+        echo "</table>" >> "$TEMP_FILE"
         echo "<p><strong>SHA256 Hash:</strong> $hash</p>" >> "$TEMP_FILE"
         echo "<hr>" >> "$TEMP_FILE"
-    fi
-done < <(cat "$report_file"; echo)
+    
+done  < <(sqlite3 "$pasta/screencaption-db.db" "SELECT filename, basepath, hash, description, type FROM screencaption;")
 
     # Rodapé do arquivo HTML
     echo "<h2>Logs de Navegação</h2>" >> "$TEMP_FILE"
@@ -134,6 +139,7 @@ cat <<EOF >> "$TEMP_FILE"
     <li><strong>tinyproxy:</strong> Um proxy HTTP leve. <a href="https://github.com/tinyproxy/tinyproxy">Repositório</a></li>
     <li><strong>mitmproxy:</strong> Um proxy HTTP/HTTPS interativo para depuração e análise de tráfego. <a href="https://github.com/mitmproxy/mitmproxy">Repositório</a></li>
     <li><strong>wkhtmltopdf:</strong> Uma ferramenta para converter HTML em PDF usando Webkit. <a href="https://github.com/wkhtmltopdf/wkhtmltopdf">Repositório</a></li>
+    <li><strong>sha256sum:</strong> Uma ferramenta de linha de comando para calcular e verificar hashes SHA-256. <a href="https://www.gnu.org/software/coreutils/manual/html_node/sha2-utilities.html">Documentação</a></li>
 </ul>
 EOF
 echo "<h2>Referências Técnicas</h2>" >> "$TEMP_FILE"

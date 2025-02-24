@@ -1,3 +1,17 @@
+# 
+salvar_dados_tabela() {
+        local filename="$1"
+        local basepath="$2"
+        local hash="$3"
+        local description="$4"
+        local type="$5"
+        
+        # Comando SQL para inserir os dados na tabela screenshot
+        sqlite3 $pasta/screencaption-db.db <<EOF
+INSERT INTO screencaption (filename, basepath, hash, description,type)
+VALUES ('$filename','$basepath', '$hash', '$description', '$type');
+EOF
+}
 # Função para capturar uma área da tela
 capturar_area() {
     if [ -z "$pasta" ]; then
@@ -26,11 +40,35 @@ capturar_area() {
     url=$(xdotool getactivewindow getwindowname | awk -F' - ' '{print $1}')
     
     # Exibe mensagem de confirmação
-    zenity --info --text="Captura de tela salva em $screenshot_file"
+    #zenity --info --text="Captura de tela salva em $screenshot_file"
     
     # Abre a captura de tela com o visualizador de imagens padrão
-    xdg-open "$screenshot_file"
+    #xdg-open "$screenshot_file"
+    # Abre a captura de tela com yad e solicita uma descrição
+    #yad --image="$screenshot_file" --title="Captura de Tela" --text="Descreva a captura de tela:" --button="gtk-ok:0" --button="gtk-cancel:1" --entry
+    description=$(yad --image="$screenshot_file" --title="Captura de Tela" --button="gtk-cancel:1" --button="gtk-ok:0" --text="Descreva a captura de tela:" --entry)
+    yad_exit_status=$?
+    echo "Descrição: $description" >> "$pasta/odysseus_snap.log"
+    echo "Valor de retorno do yad: $yad_exit_status"
+    if [ $yad_exit_status -eq 1 ]; then
+        rm "$screenshot_file"
+        yad --info --text="Captura de tela cancelada."
+    else
+     
+
+
+    # Calcula o hash do arquivo de captura de tela
+    hash=$(sha256sum "$screenshot_file" | awk '{print $1}')
     
+    echo "Hash: $hash"
+    
+    # Salva os dados na tabela screenshot
+    salvar_dados_tabela "$screenshot_file" "$(basename $screenshot_file)" "$hash" "$description" "1"
+    echo "DEBUG: SALVANDO NA TABELA__"      
+        
+        yad --info --text="Captura de tela salva em $screenshot_file"
+    fi
+
     # Grava log da ação
     {
         echo "Janela Selecionada: $window_name"
@@ -39,5 +77,5 @@ capturar_area() {
         echo "URL: $url"
     } >> "$pasta/odysseus_snap.log"
     gravar_log "Captura de Tela" "$screenshot_file \n $window_info \n JANELA: $url"
-    echo "CAPTURA_DE_TELA__: $screenshot_file" >> "$pasta/report_build.txt"
+    #echo "CAPTURA_DE_TELA__: $screenshot_file" >> "$pasta/report_build.txt"
 }

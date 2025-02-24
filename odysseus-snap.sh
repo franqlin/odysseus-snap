@@ -5,8 +5,9 @@
 yad --image="assets/images/logo.png" --timeout=3 --no-buttons --title="Bem-vindo" --text="Carregando..." --center --undecorated --fixed --skip-taskbar --no-escape  
 ) &
 sleep 5
-source "$(dirname "$0")configurations/config.sh"
-source "$(dirname "$0")configurations/programsList.sh"
+source "$(dirname "$0")/database/screencaptions.sh"
+source "$(dirname "$0")/configurations/config.sh"
+source "$(dirname "$0")/configurations/programsList.sh"
 source "$(dirname "$0")/actions/chooseFile.sh"
 source "$(dirname "$0")/actions/sysInfo.sh"
 source "$(dirname "$0")/actions/logger.sh"
