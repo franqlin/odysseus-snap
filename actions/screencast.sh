@@ -6,7 +6,8 @@ gravar_tela() {
     fi
 
 
-    yad --info --text="Selecione a área da tela que deseja gravar." --window-icon="dialog-warning"
+   
+    urlRegistro=$(yad --form --title="Captura de Tela" --window-icon="dialog-warning" --text="Selecione a área da tela que deseja gravar.. \nRegistre a URL caso necessário." --field="URL: " | awk -F'|' '{print $1}')
 
     # Obtém a geometria da área selecionada
     geometry=$(slop -f "%x %y %w %h" -b 5 -c 0.8,0,0,0.5 )
@@ -65,7 +66,7 @@ gravar_tela() {
     
     
     # Salva os dados na tabela screenshot
-    salvar_dados_tabela "$screencast_file" "$(basename $screencast_file)" "$hash" "$description" "2"
+    salvar_dados_tabela "$screencast_file" "$(basename $screencast_file)" "$hash" "$description" "2" "$urlRegistro"
     echo "DEBUG: SALVANDO NA TABELA__"      
         
         yad --info --text="Captura de tela salva em $screencast_file" --button="gtk-ok:0"

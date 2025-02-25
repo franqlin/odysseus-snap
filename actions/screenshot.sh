@@ -6,8 +6,10 @@ capturar_area() {
         return
     fi
 
-    zenity --info --text="Selecione uma área da tela para capturar."
+    urlRegistro=$(yad --form --title="Captura de Tela" --window-icon="dialog-warning" --text="Selecione uma área da tela para capturar. \nRegistre a URL caso necessário." --field="URL: " | awk -F'|' '{print $1}')
     
+    echo "DEBUG URL: $urlRegistro"
+
     # Define o nome do arquivo como screenshot_data_hora
     timestamp=$(date +"%Y%m%d_%H%M%S")
     
@@ -30,7 +32,7 @@ capturar_area() {
     window_name=$(xprop -id "$window_id" | grep 'WM_NAME(STRING)' | cut -d '"' -f 2)
     
     # Obtém a URL da aba ativa se for um navegador
-    url=$(xdotool getactivewindow getwindowname | awk -F' - ' '{print $1}')
+    
     
     # Exibe mensagem de confirmação
     #zenity --info --text="Captura de tela salva em $screenshot_file"
@@ -43,7 +45,7 @@ capturar_area() {
     description=$(yad --plug=$KEY --tabnum=1 --form --field="Descrição" &\
     yad --plug=$KEY --tabnum=2 --picture --width=700 --height=500 --file-op size-fit --filename="$screenshot_file" & \
     yad --paned --key=$KEY --button="Continue:0" --width=700 --height=500 \
-    --title="Screencaption - Save" --window-icon="find" | awk -F'|' '{print $1}')
+    --title="Screencaption - Save" --window-icon="find" | awk -F'|' '{print $1}' | sed 's/|$//')
     
     yad --image="dialog-question" \
   --title "Alert" \
@@ -67,8 +69,9 @@ capturar_area() {
     
     
     # Salva os dados na tabela screenshot
-    salvar_dados_tabela "$screenshot_file" "$(basename $screenshot_file)" "$hash" "$description" "1"
-    echo "DEBUG: SALVANDO NA TABELA__"      
+    echo "DEBUG: SALVANDO NA TABELA__: $urlRegistro"
+    salvar_dados_tabela "$screenshot_file" "$(basename $screenshot_file)" "$hash" "$description" "1" "$urlRegistro"
+          
         
         yad --info --text="Captura de tela salva em $screenshot_file" --button="gtk-ok:0"
     fi
