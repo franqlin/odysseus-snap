@@ -69,37 +69,49 @@ EOF
 while IFS="|" read -r filename basepath hash description type; do
 
    
-        exif_info=$(exiftool "$filename")
-        echo "<h3>Nome do Arquivo: $basepath</h3>" >> "$TEMP_FILE"
-        if [[ "$type" -eq 2 ]]; then
-            mkdir -p "$pasta_saida/thumbnails"
-            thumbnail_file="$pasta_saida/thumbnails/$($basepath "${screenshot_file%.mp4}_thumbnail.png")"
-            
-            #ffmpeg -i "$screenshot_file" -ss 00:00:01.000 -vframes 1 "$thumbnail_file"
-            echo "<img src=\"https://img.icons8.com/ios-filled/50/000000/video.png\" alt=\"Thumbnail\" style=\"width:50px;height:auto;\">" >> "$TEMP_FILE"
-            mkdir -p "$pasta_saida/videos"
-            cp "$filename" "$pasta_saida/videos/"
-            echo "<p><a href=\"./videos/$($basepath)\">Clique aqui para acessar o arquivo</a></p>" >> "$TEMP_FILE"
-        else
-            echo "<img src=\"file://$(realpath "$filename")\" alt=\"$(basename "$filename")\" style=\"width:300px;height:auto;\">" >> "$TEMP_FILE"
-            mkdir -p "$pasta_saida/imagens"
-            cp "$filename" "$pasta_saida/imagens/"
-            echo "<p><a href=\"./imagens/$(basename "$filename")\"><img src=\"https://img.icons8.com/ios-filled/50/000000/link.png\" alt=\"Link\" style=\"width:20px;height:auto;\"></a></p>" >> "$TEMP_FILE"
-        fi
+ exif_info=$(exiftool "$filename")
+    echo "<h3>Nome do Arquivo: $basepath</h3>" >> "$TEMP_FILE"
+    if [[ "$type" -eq 2 ]]; then
+        mkdir -p "$pasta_saida/thumbnails"
+        thumbnail_file="$pasta_saida/thumbnails/${basepath%.mp4}_thumbnail.png"
+        
+        #ffmpeg -i "$filename" -ss 00:00:01.000 -vframes 1 "$thumbnail_file"
+        echo "<img src=\"https://img.icons8.com/ios-filled/50/000000/video.png\" alt=\"Thumbnail\" style=\"width:50px;height:auto;\">" >> "$TEMP_FILE"
+        mkdir -p "$pasta_saida/videos"
+        cp "$filename" "$pasta_saida/videos/"
+        echo "<p><a href=\"./videos/$basepath\">Clique aqui para acessar o arquivo</a></p>" >> "$TEMP_FILE"
+    else
+        echo "<img src=\"file://$(realpath "$filename")\" alt=\"$(basename "$filename")\" style=\"width:300px;height:auto;\">" >> "$TEMP_FILE"
+        mkdir -p "$pasta_saida/imagens"
+        cp "$filename" "$pasta_saida/imagens/"
+        echo "<p><a href=\"./imagens/$(basename "$filename")\"><img src=\"https://img.icons8.com/ios-filled/50/000000/link.png\" alt=\"Link\" style=\"width:20px;height:auto;\"></a></p>" >> "$TEMP_FILE"
+    fi
 
-        echo "<p><strong>Descrição:</strong> $description</p>" >> "$TEMP_FILE"
+    echo "<p><strong>Descrição:</strong> $description</p>" >> "$TEMP_FILE"
 
-        echo "<h4>Metadados:</h4>" >> "$TEMP_FILE"
-        echo "<table style=\"width: 100%; font-family: monospace; font-size: 12px;\">" >> "$TEMP_FILE"
-        echo "<tr><th style=\"border: 1px solid #ddd; padding: 10px; background-color: #f2f2f2;\">Tag</th><th style=\"border: 1px solid #ddd; padding: 10px; background-color: #f2f2f2;\">Value</th></tr>" >> "$TEMP_FILE"
-        while IFS=" : " read -r tag value; do
-            echo "<tr><td style=\"border: 1px solid #ddd; padding: 10px;\">$tag</td><td style=\"border: 1px solid #ddd; padding: 10px;\">$value</td></tr>" >> "$TEMP_FILE"
-        done <<< "$exif_info"
-        echo "</table>" >> "$TEMP_FILE"
-        echo "<p><strong>SHA256 Hash:</strong> $hash</p>" >> "$TEMP_FILE"
-        echo "<hr>" >> "$TEMP_FILE"
+    if [ -n "$urlRegistro" ]; then
+        echo "<h4>Link de Referência:</h4>" >> "$TEMP_FILE"
+        echo "<p><a href=\"$urlRegistro\">$urlRegistro</a></p>" >> "$TEMP_FILE"
+        
+        host=$(echo "$urlRegistro" | awk -F/ '{print $3}')
+        traceroute_output=$(traceroute "$host")
+        
+        echo "<h4>Traceroute para $host:</h4>" >> "$TEMP_FILE"
+        echo "<pre>$traceroute_output</pre>" >> "$TEMP_FILE"
+    fi
     
-done  < <(sqlite3 "$pasta/screencaption-db.db" "SELECT filename, basepath, hash, description, type FROM screencaption;")
+    echo "<h4>Metadados:</h4>" >> "$TEMP_FILE"
+    echo "<table style=\"width: 100%; font-family: monospace; font-size: 12px;\">" >> "$TEMP_FILE"
+    echo "<tr><th style=\"border: 1px solid #ddd; padding: 10px; background-color: #f2f2f2;\">Tag</th><th style=\"border: 1px solid #ddd; padding: 10px; background-color: #f2f2f2;\">Value</th></tr>" >> "$TEMP_FILE"
+    while IFS=" : " read -r tag value; do
+        echo "<tr><td style=\"border: 1px solid #ddd; padding: 10px;\">$tag</td><td style=\"border: 1px solid #ddd; padding: 10px;\">$value</td></tr>" >> "$TEMP_FILE"
+    done <<< "$exif_info"
+    echo "</table>" >> "$TEMP_FILE"
+    echo "<p><strong>SHA256 Hash:</strong> $hash</p>" >> "$TEMP_FILE"
+    echo "<hr>" >> "$TEMP_FILE"
+
+    
+done  < <(sqlite3 "$pasta/screencaption-db.db" "SELECT filename, basepath, hash, description, type,urlRegistro FROM screencaption;")
 
     # Rodapé do arquivo HTML
     echo "<h2>Logs de Navegação</h2>" >> "$TEMP_FILE"
