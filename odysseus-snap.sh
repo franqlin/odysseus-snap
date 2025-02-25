@@ -49,9 +49,9 @@ fi
 while true; do
     acao=$(zenity --list --title="Odysseus OSINT Report" --column="Ação" \
         "📝 Editar Referências do Relatório" \
-        "🔗 Registrar URL" \
         "📸 Capturar Área da Tela" \
         "🎥 Gravar Tela" \
+        "🔗 Editar dados das Capturas" \
         "📂 Abrir Pasta de Trabalho" \
         "📈 Monitorar Requisições" \
         "📄 Criar Relatório em PDF" \
@@ -67,9 +67,9 @@ while true; do
                 abrir_formulario
             fi
             ;;
-        "🔗 Registrar URL")
+        "🔗 Editar dados das Capturas")
             if ! verificar_caso_fechado; then
-                abrir_url
+                exibir_dados_tabela_screen
             fi
             ;;
         "📸 Capturar Área da Tela")
