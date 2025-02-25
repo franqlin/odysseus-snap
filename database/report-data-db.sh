@@ -1,8 +1,7 @@
-# Função para criar a tabela screencaption no banco de dados screencaption-db
-criar_tabela_report-data() {
+criar_tabela_report_data() {
     db_path_report="$pasta/reportdata-db.db"
-    sqlite3 "$db_path" <<EOF
-CREATE TABLE IF NOT EXISTS report-data (
+    sqlite3 "$db_path_report" <<EOF
+CREATE TABLE IF NOT EXISTS "report-data" (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     referencia TEXT NOT NULL,
     solicitacao TEXT NOT NULL,

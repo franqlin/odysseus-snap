@@ -38,15 +38,40 @@ exibir_dados_tabela_screen() {
     while IFS="|" read -r id filename; do
         formatted_data+="$id $filename "
     done <<< "$dados"
-    
+        
     # Exibe os dados no yad e permite selecionar um registro para edição
-    selected=$(yad --list --title="Dados da Tabela Screencaption" --column="ID" --column="Filename" --width=800 --height=600 --text-align=center --dclick-action="deletar_dados_tabela_screen" --button="Editar:0" --button="Deletar:3" $formatted_data)
-    
-    if [ $? -eq 0 ]; then
+    selected=$(yad --list --title="Dados da Tabela Screencaption" --column="ID" --column="Filename" --width=800 --height=600 --text-align=center --button="Editar:0"  $formatted_data)
+    ret=$?
+    if [ $ret -eq 0 ]; then
         editar_dados_tabela_screen "$selected"
     fi
+    
 }
+
+exibir_deletar_dados_tabela_screen() {
+    db_path="$pasta/screencaption-db.db"
+    dados=$(sqlite3 "$db_path" "SELECT id,filename FROM screencaption;")
+    
+    # Formata os dados para exibição no yad
+    formatted_data=""
+    while IFS="|" read -r id filename; do
+        formatted_data+="$id $filename "
+    done <<< "$dados"
+    
+    # Exibe os dados no yad e permite selecionar um registro para edição
+    selected=$(yad --list --title="Dados da Tabela Screencaption" --column="ID" --column="Filename" --width=800 --height=600 --text-align=center --button="Deletar:0" $formatted_data)
+    ret=$?
+    if [ $ret -eq 0 ]; then
+        deletar_dados_tabela_screen "$selected"
+    fi
+
+}
+
 deletar_dados_tabela_screen(){
+    janela=$(yad --info --text="Deseja deletar o arquivo" --button="gtk-cancel:1" --button="gtk-ok:0")
+    button=$?
+    if [ "$button" -eq 0 ]; then
+        
     IFS="|" read -r id  <<< "$1"
     echo "Linha recebida: $1"
    
@@ -56,8 +81,13 @@ deletar_dados_tabela_screen(){
     sqlite3 "$pasta/screencaption-db.db" <<EOF
 DELETE FROM screencaption WHERE id=$id;
 EOF
-    yad --info --text="Registro deletado com sucesso!" --button="OK"
+    yad --info --text="Registro deletado com sucesso !" --button="OK"
+    else
+        yad --info --text="Registro não deletado!" --button="OK"
+    fi  
 }
+
+
 
 editar_dados_tabela_screen() {
     IFS="|" read -r id  <<< "$1"

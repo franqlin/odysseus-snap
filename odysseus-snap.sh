@@ -30,10 +30,24 @@ abrir_formulario() {
         echo "Referência: $referencia"
         echo "Solicitação: $solicitacao"
         echo "Registro: $registro"
+
+        # Salva os dados no banco de dados
+        salvar_dados_tabela_report_data "$referencia" "$solicitacao" "$registro"    
     else
         echo "Formulário cancelado."
     fi
 }
+salvar_dados_tabela_report_data() {
+    local referencia="$1"
+    local solicitacao="$2"
+    local registro="$3"
+    
+    # Comando SQL para inserir os dados na tabela report-data
+    sqlite3 $pasta/reportdata-db.db <<EOF
+INSERT INTO "report-data" (referencia, solicitacao, registro)
+VALUES ('$referencia', '$solicitacao', '$registro');
+EOF
+}   
 # Configura o manipulador de sinal para encerrar o processo de monitoramento ao sair
 trap "parar_interceptacao; [ -n \"$tail_pid\" ] && kill $tail_pid" EXIT
 # Seleciona a pasta de trabalho
@@ -51,7 +65,8 @@ while true; do
         "📝 Editar Referências do Relatório" \
         "📸 Capturar Área da Tela" \
         "🎥 Gravar Tela" \
-        "🔗 Editar dados das Capturas" \
+        "✏️ Editar dados das Capturas" \
+        "🗑️ Deletar dados das Capturas" \
         "📂 Abrir Pasta de Trabalho" \
         "📈 Monitorar Requisições" \
         "📄 Criar Relatório em PDF" \
@@ -67,11 +82,16 @@ while true; do
                 abrir_formulario
             fi
             ;;
-        "🔗 Editar dados das Capturas")
+        "✏️ Editar dados das Capturas")
             if ! verificar_caso_fechado; then
                 exibir_dados_tabela_screen
             fi
             ;;
+         "🗑️ Deletar dados das Capturas")
+            if ! verificar_caso_fechado; then
+                exibir_deletar_dados_tabela_screen
+            fi
+            ;;           
         "📸 Capturar Área da Tela")
             if ! verificar_caso_fechado; then
                 capturar_area

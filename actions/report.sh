@@ -53,9 +53,11 @@ th { background-color: #f2f2f2; }
 </div>
 <br>
 <div style="text-align: left; font-family: monospace; line-height: 1.2;">
-    <p><strong>Referência:</strong> 0802185-58.2024.8.19.0025</p>
-    <p><strong>Solicitação:</strong> FORM5389</p>
-    <p><strong>Registro Interno:</strong> 35-2024</p>
+    while IFS="|" read -r referencia solicitacao registro; do
+        echo "<p><strong>Referência:</strong> $referencia</p>" >> "$TEMP_FILE"
+        echo "<p><strong>Solicitação:</strong> $solicitacao</p>" >> "$TEMP_FILE"
+        echo "<p><strong>Registro Interno:</strong> $registro</p>" >> "$TEMP_FILE"
+    done < <(sqlite3 "$pasta/report-data-db.db" "SELECT referencia, solicitacao, registro FROM report_data;")
 </div>
 <h2 style="text-align: center;">Relatório de Evidências Digitais</h2>
 <h2>Informações do Sistema</h2>

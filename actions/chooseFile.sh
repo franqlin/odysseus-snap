@@ -35,7 +35,7 @@ selecionar_pasta() {
                 
         db_path_report="$pasta/reportdata-db.db"
         if [ ! -f "db_path_report" ]; then
-            criar_tabela_report-data
+            criar_tabela_report_data
         fi      
         
 
