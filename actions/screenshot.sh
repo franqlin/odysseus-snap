@@ -1,4 +1,4 @@
-
+KEY=$RANDOM
 # Função para capturar uma área da tela
 capturar_area() {
     if [ -z "$pasta" ]; then
@@ -10,7 +10,13 @@ capturar_area() {
     
     # Define o nome do arquivo como screenshot_data_hora
     timestamp=$(date +"%Y%m%d_%H%M%S")
-    screenshot_file="$pasta/screenshot_$timestamp.png"
+    
+    # Cria a pasta images na pasta de trabalho, se não existir
+    mkdir -p "$pasta/images"
+    
+    # Define o caminho completo do arquivo de captura de tela
+    screenshot_file="$pasta/images/screenshot_$timestamp.png"
+   
 
     # Captura a área selecionada e desenha uma linha vermelha de 3 pixels de largura ao redor da área selecionada
      maim -s -u -b 3 -c 0.8,0,0,0.5 "$screenshot_file" 
@@ -33,16 +39,26 @@ capturar_area() {
     #xdg-open "$screenshot_file"
     # Abre a captura de tela com yad e solicita uma descrição
     #yad --image="$screenshot_file" --title="Captura de Tela" --text="Descreva a captura de tela:" --button="gtk-ok:0" --button="gtk-cancel:1" --entry
-    description=$(yad --image="$screenshot_file" --title="Captura de Tela" --button="gtk-cancel:1" --button="gtk-ok:0" --text="Descreva a captura de tela:" --entry)
-    yad_exit_status=$?
+    #description=$(yad --image="$screenshot_file" --title="Captura de Tela" --button="gtk-cancel:1" --button="gtk-ok:0" --text="Descreva a captura de tela:" --entry)
+    description=$(yad --plug=$KEY --tabnum=1 --form --field="Descrição" &\
+    yad --plug=$KEY --tabnum=2 --picture --width=700 --height=500 --file-op size-fit --filename="$screenshot_file" & \
+    yad --paned --key=$KEY --button="Continue:0" --width=700 --height=500 \
+    --title="Screencaption - Save" --window-icon="find" | awk -F'|' '{print $1}')
+    
+    yad --image="dialog-question" \
+  --title "Alert" \
+  --text "Deseja salvar os dados da captura de Tela " \
+  --button="Sim:0" \
+  --button="Não:1" \
+
+    ret=$?
     echo "Descrição: $description" >> "$pasta/odysseus_snap.log"
     echo "Valor de retorno do yad: $yad_exit_status"
-    if [ $yad_exit_status -eq 1 ]; then
+    if [ $ret -eq 1 ]; then
         rm "$screenshot_file"
-        yad --info --text="Captura de tela cancelada."
+        yad --info --text="Captura de tela cancelada." --button="gtk-ok:0"
     else
      
-
 
     # Calcula o hash do arquivo de captura de tela
     hash=$(sha256sum "$screenshot_file" | awk '{print $1}')
@@ -54,7 +70,7 @@ capturar_area() {
     salvar_dados_tabela "$screenshot_file" "$(basename $screenshot_file)" "$hash" "$description" "1"
     echo "DEBUG: SALVANDO NA TABELA__"      
         
-        yad --info --text="Captura de tela salva em $screenshot_file"
+        yad --info --text="Captura de tela salva em $screenshot_file" --button="gtk-ok:0"
     fi
 
     # Grava log da ação
