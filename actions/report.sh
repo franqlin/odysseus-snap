@@ -53,11 +53,15 @@ th { background-color: #f2f2f2; }
 </div>
 <br>
 <div style="text-align: left; font-family: monospace; line-height: 1.2;">
+EOF
+
     while IFS="|" read -r referencia solicitacao registro; do
         echo "<p><strong>Referência:</strong> $referencia</p>" >> "$TEMP_FILE"
         echo "<p><strong>Solicitação:</strong> $solicitacao</p>" >> "$TEMP_FILE"
         echo "<p><strong>Registro Interno:</strong> $registro</p>" >> "$TEMP_FILE"
-    done < <(sqlite3 "$pasta/report-data-db.db" "SELECT referencia, solicitacao, registro FROM report_data;")
+    done < <(sqlite3 "$pasta/report-data-db.db" "SELECT referencia, solicitacao, registro FROM report_data;" || { zenity --error --text="Erro ao acessar o banco de dados report-data-db.db"; continue; })
+
+cat <<EOF >> "$TEMP_FILE"
 </div>
 <h2 style="text-align: center;">Relatório de Evidências Digitais</h2>
 <h2>Informações do Sistema</h2>
