@@ -59,7 +59,7 @@ EOF
         echo "<p><strong>Referência:</strong> $referencia</p>" >> "$TEMP_FILE"
         echo "<p><strong>Solicitação:</strong> $solicitacao</p>" >> "$TEMP_FILE"
         echo "<p><strong>Registro Interno:</strong> $registro</p>" >> "$TEMP_FILE"
-    done < <(sqlite3 "$pasta/report-data-db.db" "SELECT referencia, solicitacao, registro FROM report_data;" || { zenity --error --text="Erro ao acessar o banco de dados report-data-db.db"; continue; })
+    done < <(sqlite3 "$pasta/reportdata-db.db" "SELECT referencia, solicitacao, registro FROM report;"})
 
 cat <<EOF >> "$TEMP_FILE"
 </div>
@@ -77,6 +77,7 @@ while IFS="|" read -r filename basepath hash description type; do
    
  exif_info=$(exiftool "$filename")
     echo "<h3>Nome do Arquivo: $basepath</h3>" >> "$TEMP_FILE"
+    zenity --info --text="Tipo: $type"
     if [[ "$type" -eq 2 ]]; then
         mkdir -p "$pasta_saida/thumbnails"
         thumbnail_file="$pasta_saida/thumbnails/${basepath%.mp4}_thumbnail.png"
@@ -117,7 +118,7 @@ while IFS="|" read -r filename basepath hash description type; do
     echo "<hr>" >> "$TEMP_FILE"
 
     
-done  < <(sqlite3 "$pasta/screencaption-db.db" "SELECT filename, basepath, hash, description, type,urlRegistro FROM screencaption;")
+done  < <(sqlite3 "$pasta/screencaption-db.db" "SELECT filename, basepath, hash, description, type, urlRegistro FROM screencaption;")
 
     # Rodapé do arquivo HTML
     echo "<h2>Logs de Navegação</h2>" >> "$TEMP_FILE"
