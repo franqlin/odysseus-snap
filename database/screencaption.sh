@@ -8,7 +8,7 @@ CREATE TABLE IF NOT EXISTS screencaption (
     basepath TEXT NOT NULL,
     hash TEXT NOT NULL,
     description TEXT,
-    type TEXT NOT NULL,
+    type INTERGER NOT NULL,
     urlRegistro TEXT  NULL   
 );
 EOF
@@ -40,13 +40,13 @@ exibir_dados_tabela_screen() {
     done <<< "$dados"
         
     # Exibe os dados no yad e permite selecionar um registro para edição
-    selected=$(yad --list --title="Dados da Tabela Screencaption" --column="ID" --column="Filename" --width=800 --height=600 --text-align=center --button="Editar:0"  $formatted_data)
+    selected=$(yad --list --title="Dados da Tabela Screencaption" --column="ID" --dclick-action="bash -c 'ristretto %s'" --column="Filename" --width=800 --height=600 --text-align=center --button="Editar:0"  $formatted_data)
     ret=$?
     if [ $ret -eq 0 ]; then
         editar_dados_tabela_screen "$selected"
     fi
     
-}
+}  
 
 exibir_deletar_dados_tabela_screen() {
     db_path="$pasta/screencaption-db.db"

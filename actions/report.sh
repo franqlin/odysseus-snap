@@ -72,21 +72,22 @@ cat <<EOF >> "$TEMP_FILE"
 <p>As funções hash são sequências alfanuméricas geradas por operações matemáticas e lógicas, produzindo um código de tamanho fixo que, em regra, é único para cada arquivo. Qualquer mínima alteração no arquivo resulta em um hash completamente diferente, garantindo a detecção de modificações.</p>
 <h2>Lista de Arquivos</h2>
 EOF
-while IFS="|" read -r filename basepath hash description type; do
+while IFS="|" read -r filename basepath hash description type urlRegistro; do
 
-   
+   zenity --info --text="file: $filename"
  exif_info=$(exiftool "$filename")
     echo "<h3>Nome do Arquivo: $basepath</h3>" >> "$TEMP_FILE"
     zenity --info --text="Tipo: $type"
-    if [[ "$type" -eq 2 ]]; then
+    zenity --info --text="Tipo: $urlRegistro"
+    if [[ "$type" == "2" ]]; then
         mkdir -p "$pasta_saida/thumbnails"
-        thumbnail_file="$pasta_saida/thumbnails/${basepath%.mp4}_thumbnail.png"
+        #thumbnail_file="$pasta_saida/thumbnails/${basepath%.mp4}_thumbnail.png"
         
         #ffmpeg -i "$filename" -ss 00:00:01.000 -vframes 1 "$thumbnail_file"
         echo "<img src=\"https://img.icons8.com/ios-filled/50/000000/video.png\" alt=\"Thumbnail\" style=\"width:50px;height:auto;\">" >> "$TEMP_FILE"
         mkdir -p "$pasta_saida/videos"
         cp "$filename" "$pasta_saida/videos/"
-        echo "<p><a href=\"./videos/$basepath\">Clique aqui para acessar o arquivo</a></p>" >> "$TEMP_FILE"
+        echo "<p><a href=\"./videos/$(basename "$filename")\">Clique aqui para acessar o arquivo</a></p>" >> "$TEMP_FILE"
     else
         echo "<img src=\"file://$(realpath "$filename")\" alt=\"$(basename "$filename")\" style=\"width:300px;height:auto;\">" >> "$TEMP_FILE"
         mkdir -p "$pasta_saida/imagens"

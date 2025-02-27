@@ -69,7 +69,13 @@ capturar_area() {
     
     
     # Salva os dados na tabela screenshot
-    echo "DEBUG: SALVANDO NA TABELA__: $urlRegistro"
+    description=$(echo "$description" | sed 's/|//g')
+    echo "DEBUG: SALVANDO NA TABELA__: $screenshot_file" >> "$pasta/odysseus_snap.log"
+        echo "Arquivo de Captura de Tela: $screenshot_file"
+        echo "Nome do Arquivo: $(basename $screenshot_file)"
+        echo "Hash: $hash"
+        echo "Descrição: $description"
+        echo "URL Registro: $urlRegistro"
     salvar_dados_tabela "$screenshot_file" "$(basename $screenshot_file)" "$hash" "$description" "1" "$urlRegistro"
           
         
