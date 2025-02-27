@@ -1,14 +1,28 @@
 #!/bin/bash
-# Display splash screen with Zenity
-(
+#(
   # Exibir a splash screen com a imagem logo.png por 3 segundos usando yad
-yad --image="assets/images/logo.png" --timeout=3 --no-buttons --title="Bem-vindo" --text="Carregando..." --center --undecorated --fixed --skip-taskbar --no-escape  
-) &
-sleep 5
+#yad --image="assets/images/logo.png" --timeout=3 --no-buttons --title="Bem-vindo" --text="Carregando..." --center --undecorated --fixed --skip-taskbar --no-escape  
+#) &
+
+(for ((i=1; i<=100; i++)) {
+    echo $i
+    echo "# $((i))%"
+    sleep 0.1
+} | yad --splash \
+  --progress \
+  --pulsate \
+  --image="assets/images/logo.png" \
+  --text-align=center \
+  --auto-close \
+  --skip-taskbar \
+  --center \
+  --no-buttons) &
+sleep 10
 
 # Define the variable 'pasta' with the appropriate path
 pasta="$(dirname "$0")"
 
+source "$pasta/actions/form-data.sh"
 source "$pasta/database/report-data-db.sh"
 source "$pasta/database/screencaption.sh"
 source "$pasta/configurations/config.sh"
@@ -24,68 +38,6 @@ source "$pasta/actions/requestmonitor.sh"
 source "$pasta/actions/actions.sh"
 
 
-# Função para abrir um formulário no yad e obter os valores
-abrir_formulario() {
-    
-    
-  
-        
-        # Verifica se já existe um registro com id 1
-        registro_existente=$(sqlite3 $pasta/reportdata-db.db "SELECT COUNT(*) FROM report WHERE id=1;")
-        
-        if [ "$registro_existente" -gt 0 ]; then
-            # Carrega os dados do registro com id 1
-            alterar_registro=$(sqlite3 $pasta/reportdata-db.db "SELECT referencia, solicitacao, registro FROM report WHERE id=1;")
-            referencia=$(echo "$alterar_registro" | awk -F '|' '{print $1}')
-            solicitacao=$(echo "$alterar_registro" | awk -F '|' '{print $2}')
-            registro=$(echo "$alterar_registro" | awk -F '|' '{print $3}')
-            
-            # Abre o formulário para editar os dados
-            yad --form --title="Editar Registro" --height=400 --width=500 --field="Referência" --field="Solicitação" --field="Registro" --center --button="Salvar:0" --button="Cancelar:1" \
-                -- "$referencia" "$solicitacao" "$registro" | {
-                read -r referencia solicitacao registro
-                alterar_dados_tabela_report_data "$referencia" "$solicitacao" "$registro"
-            }
-        else
-            # Salva os dados no banco de dados
-            formulario=$(yad --form --title="Formulário de Registro" --height=400 --width=500 --field="Referência" --field="Solicitação" --field="Registro" --center)
-               if [ $? -eq 0 ]; then
-                referencia=$(echo "$formulario" | awk -F '|' '{print $1}')
-                solicitacao=$(echo "$formulario" | awk -F '|' '{print $2}')
-                registro=$(echo "$formulario" | awk -F '|' '{print $3}')
-                echo "Referência: $referencia"
-                echo "Solicitação: $solicitacao"
-                echo "Registro: $registro"
-                salvar_dados_tabela_report_data "$referencia" "$solicitacao" "$registro"
-             fi
-        fi
-   
-    
-}
-
-alterar_dados_tabela_report_data() {
-    local referencia="$1"
-    local solicitacao="$2"
-    local registro="$3"
-    
-    # Comando SQL para alterar os dados na tabela report-data
-    sqlite3 $pasta/reportdata-db.db <<EOF
-UPDATE "report" SET referencia='$referencia', solicitacao='$solicitacao', registro='$registro' WHERE id=1;      
-EOF
-}
-# Função para salvar os dados na tabela report-data
-salvar_dados_tabela_report_data() {
-    local referencia="$1"
-    local solicitacao="$2"
-    local registro="$3"
-    
-    # Comando SQL para inserir os dados na tabela report-data
-    sqlite3 $pasta/reportdata-db.db <<EOF
-
-INSERT INTO "report" (referencia, solicitacao, registro)
-VALUES ('$referencia', '$solicitacao', '$registro');
-EOF
-}   
 # Configura o manipulador de sinal para encerrar o processo de monitoramento ao sair
 trap "parar_interceptacao; [ -n \"$tail_pid\" ] && kill $tail_pid" EXIT
 # Seleciona a pasta de trabalho
