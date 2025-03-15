@@ -19,11 +19,8 @@ relatorio_final() {
     TEMP_FILE="$pasta/relatorio_final.html"
     OUTPUT_FILE_PDF="$pasta_saida/relatorio_final.pdf"
 
-    # Lê o atributo "report_reader" do arquivo ody.config e armazena em uma variável
-    #report_reader=$(grep -oP '(?<=^report_reader=).*' "$(dirname "$0")/ody.config")
     # Cabeçalho do arquivo HTML
     cat <<EOF > "$TEMP_FILE"
-
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
@@ -59,7 +56,7 @@ EOF
         echo "<p><strong>Referência:</strong> $referencia</p>" >> "$TEMP_FILE"
         echo "<p><strong>Solicitação:</strong> $solicitacao</p>" >> "$TEMP_FILE"
         echo "<p><strong>Registro Interno:</strong> $registro</p>" >> "$TEMP_FILE"
-    done < <(sqlite3 "$pasta/reportdata-db.db" "SELECT referencia, solicitacao, registro FROM report;"})
+    done < <(sqlite3 "$pasta/reportdata-db.db" "SELECT referencia, solicitacao, registro FROM report;")
 
 cat <<EOF >> "$TEMP_FILE"
 </div>
@@ -67,59 +64,63 @@ cat <<EOF >> "$TEMP_FILE"
 <h2>Informações do Sistema</h2>
 <pre>$(obter_info_sistema)</pre>
 <h2>Introdução Técnica</h2>
-<p>Este relatório foi gerado automaticamente pelo Odysseus SNAP, uma ferramenta de coleta de evidências digitais para investigações forenses. O relatório contém informações sobre arquivos, metadados e capturas de tela capturadas durante a investigação.além de aplicar funções hash conhecidas para garantir a integridade dos dados. </p>
+<p> O relatório contém informações sobre arquivos, metadados e capturas de tela capturadas durante a investigação.além de aplicar funções hash conhecidas para garantir a integridade dos dados. </p>
 <h2>Funções Hash e Integridade</h2>
 <p>As funções hash são sequências alfanuméricas geradas por operações matemáticas e lógicas, produzindo um código de tamanho fixo que, em regra, é único para cada arquivo. Qualquer mínima alteração no arquivo resulta em um hash completamente diferente, garantindo a detecção de modificações.</p>
 <h2>Lista de Arquivos</h2>
 EOF
-while IFS="|" read -r filename basepath hash description type urlRegistro; do
 
-   zenity --info --text="file: $filename"
- exif_info=$(exiftool "$filename")
-    echo "<h3>Nome do Arquivo: $basepath</h3>" >> "$TEMP_FILE"
-    zenity --info --text="Tipo: $type"
-    zenity --info --text="Tipo: $urlRegistro"
-    if [[ "$type" == "2" ]]; then
-        mkdir -p "$pasta_saida/thumbnails"
-        #thumbnail_file="$pasta_saida/thumbnails/${basepath%.mp4}_thumbnail.png"
+    while IFS="|" read -r filename basepath hash description type urlRegistro; do
+        exif_info=$(exiftool "$filename")
         
-        #ffmpeg -i "$filename" -ss 00:00:01.000 -vframes 1 "$thumbnail_file"
-        echo "<img src=\"https://img.icons8.com/ios-filled/50/000000/video.png\" alt=\"Thumbnail\" style=\"width:50px;height:auto;\">" >> "$TEMP_FILE"
-        mkdir -p "$pasta_saida/videos"
-        cp "$filename" "$pasta_saida/videos/"
-        echo "<p><a href=\"./videos/$(basename "$filename")\">Clique aqui para acessar o arquivo</a></p>" >> "$TEMP_FILE"
-    else
-        echo "<img src=\"file://$(realpath "$filename")\" alt=\"$(basename "$filename")\" style=\"width:300px;height:auto;\">" >> "$TEMP_FILE"
-        mkdir -p "$pasta_saida/imagens"
-        cp "$filename" "$pasta_saida/imagens/"
-        echo "<p><a href=\"./imagens/$(basename "$filename")\"><img src=\"https://img.icons8.com/ios-filled/50/000000/link.png\" alt=\"Link\" style=\"width:20px;height:auto;\"></a></p>" >> "$TEMP_FILE"
-    fi
 
-    echo "<p><strong>Descrição:</strong> $description</p>" >> "$TEMP_FILE"
+        if [[ "$type" == "2" ]]; then
+             
+            mkdir -p "$pasta_saida/thumbnails"
+            echo "<img src=\"https://img.icons8.com/ios-filled/50/000000/video.png\" alt=\"Thumbnail\" style=\"width:50px;height:auto;\">" >> "$TEMP_FILE"
+            mkdir -p "$pasta_saida/videos"
+            cp "$filename" "$pasta_saida/videos/"
+            echo "<p><a href=\"./videos/$(basename "$filename")\">Clique aqui para acessar o arquivo</a></p>" >> "$TEMP_FILE"
+        fi   
 
-    if [ -n "$urlRegistro" ]; then
-        echo "<h4>Link de Referência:</h4>" >> "$TEMP_FILE"
-        echo "<p><a href=\"$urlRegistro\">$urlRegistro</a></p>" >> "$TEMP_FILE"
+        if [[ "$type" == "1" ]]; then
+            echo "<h3>Nome do Arquivo: $basepath</h3>" >> "$TEMP_FILE"
+            if [ -n "$urlRegistro" ]; then
+            echo "<p>Referência: <a href=\"$urlRegistro\">$urlRegistro</a></p>" >> "$TEMP_FILE"
+            fi
+            echo "<img src=\"file://$(realpath "$filename")\" alt=\"$(basename "$filename")\" style=\"width:300px;height:auto;\">" >> "$TEMP_FILE"
+            mkdir -p "$pasta_saida/imagens"
+            cp "$filename" "$pasta_saida/imagens/"
+            echo "<p><a href=\"./imagens/$(basename "$filename")\"><img src=\"https://img.icons8.com/ios-filled/50/000000/link.png\" alt=\"Link\" style=\"width:20px;height:auto;\"></a>Abrir</p>" >> "$TEMP_FILE"
+            
+                    if [ -n "$description" ]; then
+            echo "<p><strong>Descrição:</strong> $description</p>" >> "$TEMP_FILE"
+        fi
+
+        if [ -n "$urlRegistro" ]; then
+            host=$(echo "$urlRegistro" | awk -F/ '{print $3}')
+            traceroute_output=$(traceroute "$host")
+            
+            echo "<h4>Traceroute para $host:</h4>" >> "$TEMP_FILE"
+            echo "<pre>$traceroute_output</pre>" >> "$TEMP_FILE"
+        fi
         
-        host=$(echo "$urlRegistro" | awk -F/ '{print $3}')
-        traceroute_output=$(traceroute "$host")
-        
-        echo "<h4>Traceroute para $host:</h4>" >> "$TEMP_FILE"
-        echo "<pre>$traceroute_output</pre>" >> "$TEMP_FILE"
-    fi
-    
-    echo "<h4>Metadados:</h4>" >> "$TEMP_FILE"
-    echo "<table style=\"width: 100%; font-family: monospace; font-size: 12px;\">" >> "$TEMP_FILE"
-    echo "<tr><th style=\"border: 1px solid #ddd; padding: 10px; background-color: #f2f2f2;\">Tag</th><th style=\"border: 1px solid #ddd; padding: 10px; background-color: #f2f2f2;\">Value</th></tr>" >> "$TEMP_FILE"
-    while IFS=" : " read -r tag value; do
-        echo "<tr><td style=\"border: 1px solid #ddd; padding: 10px;\">$tag</td><td style=\"border: 1px solid #ddd; padding: 10px;\">$value</td></tr>" >> "$TEMP_FILE"
-    done <<< "$exif_info"
-    echo "</table>" >> "$TEMP_FILE"
-    echo "<p><strong>SHA256 Hash:</strong> $hash</p>" >> "$TEMP_FILE"
-    echo "<hr>" >> "$TEMP_FILE"
+        echo "<h4>Metadados:</h4>" >> "$TEMP_FILE"
+        echo "<table style=\"width: 100%; font-family: monospace; font-size: 12px;\">" >> "$TEMP_FILE"
+        echo "<tr><th style=\"border: 1px solid #ddd; padding: 10px; background-color: #f2f2f2;\">Tag</th><th style=\"border: 1px solid #ddd; padding: 10px; background-color: #f2f2f2;\">Value</th></tr>" >> "$TEMP_FILE"
 
-    
-done  < <(sqlite3 "$pasta/screencaption-db.db" "SELECT filename, basepath, hash, description, type, urlRegistro FROM screencaption;")
+
+
+        fi
+
+
+        while IFS=" : " read -r tag value; do
+            echo "<tr><td style=\"border: 1px solid #ddd; padding: 10px;\">$tag</td><td style=\"border: 1px solid #ddd; padding: 10px;\">$value</td></tr>" >> "$TEMP_FILE"
+        done <<< "$exif_info"
+        echo "</table>" >> "$TEMP_FILE"
+        echo "<p><strong>SHA256 Hash:</strong> $hash</p>" >> "$TEMP_FILE"
+        echo "<hr>" >> "$TEMP_FILE"
+    done < <(sqlite3 "$pasta/screencaption-db.db" "SELECT DISTINCT filename, basepath, hash, description, type, urlRegistro FROM screencaption WHERE filename IS NOT NULL AND basepath IS NOT NULL AND hash IS NOT NULL AND type IS NOT NULL;")
 
     # Rodapé do arquivo HTML
     echo "<h2>Logs de Navegação</h2>" >> "$TEMP_FILE"
@@ -140,10 +141,9 @@ done  < <(sqlite3 "$pasta/screencaption-db.db" "SELECT filename, basepath, hash,
         fi
     done
     echo "</table>" >> "$TEMP_FILE"
-    # Rodapé do arquivo HTML
-echo "<h2>Funções Hash e Integridade</h2>" >> "$TEMP_FILE"
-echo "<p>As funções hash são sequências alfanuméricas geradas por operações matemáticas e lógicas, produzindo um código de tamanho fixo que, em regra, é único para cada arquivo. Qualquer mínima alteração no arquivo resulta em um hash completamente diferente, garantindo a detecção de modificações.</p>" >> "$TEMP_FILE"
-cat <<EOF >> "$TEMP_FILE"
+    echo "<h2>Funções Hash e Integridade</h2>" >> "$TEMP_FILE"
+    echo "<p>As funções hash são sequências alfanuméricas geradas por operações matemáticas e lógicas, produzindo um código de tamanho fixo que, em regra, é único para cada arquivo. Qualquer mínima alteração no arquivo resulta em um hash completamente diferente, garantindo a detecção de modificações.</p>" >> "$TEMP_FILE"
+    cat <<EOF >> "$TEMP_FILE"
 <h2>Ferramentas Utilizadas</h2>
 <p>Este projeto utiliza diversas ferramentas para realizar a coleta e análise de dados. Abaixo está uma descrição técnica de cada uma delas:</p>
 <ul>
@@ -162,25 +162,24 @@ cat <<EOF >> "$TEMP_FILE"
     <li><strong>sha256sum:</strong> Uma ferramenta de linha de comando para calcular e verificar hashes SHA-256. <a href="https://www.gnu.org/software/coreutils/manual/html_node/sha2-utilities.html">Documentação</a></li>
 </ul>
 EOF
-echo "<h2>Referências Técnicas</h2>" >> "$TEMP_FILE"
-echo "<ol>" >> "$TEMP_FILE"
-echo "<li><strong>ISO/IEC 27037:2012.</strong> <em>Information technology — Security techniques — Guidelines for identification, collection, acquisition, and preservation of digital evidence.</em></li>" >> "$TEMP_FILE"
-echo "<li><strong>ISO/IEC 27001:2013.</strong> <em>Information technology — Security techniques — Information security management systems — Requirements.</em></li>" >> "$TEMP_FILE"
-echo "<li><strong>ISO/IEC 27002:2013.</strong> <em>Information technology — Security techniques — Code of practice for information security controls.</em></li>" >> "$TEMP_FILE"
-echo "<li><strong>ISO/IEC 27035:2016.</strong> <em>Information technology — Security techniques — Information security incident management.</em></li>" >> "$TEMP_FILE"
-echo "<li><strong>Marco Civil da Internet (Lei Nº 12.965/2014).</strong> <em>Estabelece princípios, garantias, direitos e deveres para o uso da Internet no Brasil.</em></li>" >> "$TEMP_FILE"
-echo "<li><strong>Artigo 7º.</strong> <em>Estabelece os direitos dos usuários da Internet.</em></li>" >> "$TEMP_FILE"
-echo "<li><strong>Artigo 10º.</strong> <em>Trata da guarda e proteção dos registros de conexão e de acesso a aplicações de Internet.</em></li>" >> "$TEMP_FILE"
-echo "<li><strong>Artigo 11º.</strong> <em>Estabelece que a coleta, guarda, armazenamento e tratamento de dados pessoais ou de comunicações devem respeitar a legislação brasileira.</em></li>" >> "$TEMP_FILE"
-echo "</ol>" >> "$TEMP_FILE"
+    echo "<h2>Referências Técnicas</h2>" >> "$TEMP_FILE"
+    echo "<ol>" >> "$TEMP_FILE"
+    echo "<li><strong>ISO/IEC 27037:2012.</strong> <em>Information technology — Security techniques — Guidelines for identification, collection, acquisition, and preservation of digital evidence.</em></li>" >> "$TEMP_FILE"
+    echo "<li><strong>ISO/IEC 27001:2013.</strong> <em>Information technology — Security techniques — Information security management systems — Requirements.</em></li>" >> "$TEMP_FILE"
+    echo "<li><strong>ISO/IEC 27002:2013.</strong> <em>Information technology — Security techniques — Code of practice for information security controls.</em></li>" >> "$TEMP_FILE"
+    echo "<li><strong>ISO/IEC 27035:2016.</strong> <em>Information technology — Security techniques — Information security incident management.</em></li>" >> "$TEMP_FILE"
+    echo "<li><strong>Marco Civil da Internet (Lei Nº 12.965/2014).</strong> <em>Estabelece princípios, garantias, direitos e deveres para o uso da Internet no Brasil.</em></li>" >> "$TEMP_FILE"
+    echo "<li><strong>Artigo 7º.</strong> <em>Estabelece os direitos dos usuários da Internet.</em></li>" >> "$TEMP_FILE"
+    echo "<li><strong>Artigo 10º.</strong> <em>Trata da guarda e proteção dos registros de conexão e de acesso a aplicações de Internet.</em></li>" >> "$TEMP_FILE"
+    echo "<li><strong>Artigo 11º.</strong> <em>Estabelece que a coleta, guarda, armazenamento e tratamento de dados pessoais ou de comunicações devem respeitar a legislação brasileira.</em></li>" >> "$TEMP_FILE"
+    echo "</ol>" >> "$TEMP_FILE"
     cat <<EOF >> "$TEMP_FILE"
 </body>
 </html>
 EOF
-    #--keep-relative-links  
+
     # Converter o relatório para PDF usando wkhtmltopdf
-     
-    wkhtmltopdf --enable-local-file-access  --keep-relative-links \
+    wkhtmltopdf --enable-local-file-access --keep-relative-links \
      --footer-left "MPRJ" \
      --footer-right "[page]/[toPage]" \
      --footer-center "Divisão Especial de Inteligência Cibernética" \
@@ -192,7 +191,6 @@ EOF
      --margin-left "20mm" \
      --margin-right "20mm" \
      "$TEMP_FILE" "$OUTPUT_FILE_PDF"
-     #--header-center "$cabecalho" \
 
     # Remover o arquivo temporário
     mv "$TEMP_FILE" "$pasta_saida/relatorio_final_$(date +"%Y%m%d_%H%M%S").html"
@@ -201,20 +199,12 @@ EOF
     zenity --info --text="Relatório final gerado em $OUTPUT_FILE_PDF"
      
     # Criar as pastas de saída
-    #mkdir -p "$pasta_saida/imagens"
-    #mkdir -p "$pasta_saida/videos"
     mkdir -p "$pasta_saida/logs"
 
     # Copiar arquivos para as respectivas pastas
-    #cp "$pasta"/*.png "$pasta_saida/imagens/"
-    #cp "$pasta"/*.mp4 "$pasta_saida/videos/"
     cp "$pasta/requests.txt" "$pasta_saida/logs/"
     cp "$pasta/odysseus_snap.log" "$pasta_saida/logs/"
-    # Copiar arquivos *.png, *.mp4, requests.txt, odysseus_snap.log para a pasta do relatório
-    # Renomear a pasta de thumbs para thumbs_old
-  #  if [ -d "$pasta/thumbnails" ]; then
-   #     mv "$pasta/thumbnails" "$pasta/thumbnails_old"
-   # fi
+
     # Abrir o relatório PDF gerado com a aplicação padrão
     xdg-open "$OUTPUT_FILE_PDF"
     gravar_log "Criação de Relatório Final" "$OUTPUT_FILE_PDF"
