@@ -20,9 +20,34 @@ function on_click() {
 }
 export -f on_click
 
-# create the notification icon
+# add handler for menu actions
+function editar_referencias() {
+  echo "Editar Referências do Relatório"
+  # Adicione aqui a lógica para editar referências do relatório
+}
+export -f editar_referencias
+
+function capturar_area() {
+  echo "Capturar Área da Tela"
+  # Adicione aqui a lógica para capturar área da tela
+}
+export -f capturar_area
+
+function gravar_tela() {
+  echo "Gravar Tela"
+  # Adicione aqui a lógica para gravar tela
+}
+export -f gravar_tela
+
+function abrir_pasta() {
+  xdg-open "$HOME"
+}
+export -f abrir_pasta
+
+# create the notification icon with menu
 yad --notification \
   --listen \
   --image="gnome-info" \
-  --text="Notification tooltip" \
-  --command="bash -c on_click" <&3
+  --text="Odysseus OSINT Report" \
+ --command="bash -c on_click" \
+  --menu="📝 Editar Referências do Relatório!bash -c editar_referencias|📸 Capturar Área da Tela!bash -c capturar_area|🎥 Gravar Tela!bash -c gravar_tela|📂 Abrir Pasta de Trabalho!bash -c abrir_pasta" <&3 

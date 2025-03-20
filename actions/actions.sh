@@ -23,14 +23,14 @@ fechar_e_abrir_firefox() {
     # Verifica se há instâncias do Firefox em execução
     if ! verificar_caso_fechado; then
         
-        if pgrep firefox > /dev/null; then
+        if pgrep google-chrome > /dev/null; then
             # Fecha todas as instâncias do Firefox
-            pkill firefox
+            pkill google-chrome
             #zenity --info --text="Todas as instâncias do Firefox foram fechadas."
         fi
 
         # Abre uma nova sessão do Firefox sem abas abertas
-        firefox --new-instance --no-remote about:blank &
+        google-chrome --proxy-server="http://localhost:8080" --new-instance about:blank &
         # Cria o arquivo requests.txt na pasta de trabalho e escreve a primeira linha
         echo "Relatório de Requisição" >> "$pasta/requests.txt"
         echo "" >> "$pasta/report_build.txt"

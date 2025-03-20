@@ -1,0 +1,25 @@
+#!/bin/bash
+
+# Define o diretório onde o script será executado
+APP_DIR="/opt/applications/odysseus-snap/hashtools"
+
+# Caminho para o script a ser executado
+SCRIPT_PATH="$APP_DIR/odysseus-hash-folder-all.sh"
+
+# Verifica se o diretório existe
+if [ ! -d "$APP_DIR" ]; then
+    echo "Diretório $APP_DIR não encontrado."
+    exit 1
+fi
+
+# Verifica se o script existe
+if [ ! -f "$SCRIPT_PATH" ]; then
+    echo "Script $SCRIPT_PATH não encontrado."
+    exit 1
+fi
+
+# Muda para o diretório do aplicativo
+cd "$APP_DIR"
+
+# Executa o script
+bash "$SCRIPT_PATH"
