@@ -21,15 +21,15 @@ capturar_area() {
    
 
     # Captura a área selecionada e desenha uma linha vermelha de 3 pixels de largura ao redor da área selecionada
-     maim -s -u -b 3 -c 0.8,0,0,0.5 "$screenshot_file" 
+    # maim -s -u -b 3 -c 0.8,0,0,0.5 "$screenshot_file" 
 
     # Copia a imagem para a área de transferência
-    xclip -selection clipboard -t image/png -i "$screenshot_file"
+    flameshot gui -p  "$screenshot_file"
     
     # Obtém informações da janela selecionada
-    window_info=$(xwininfo)
-    window_id=$(echo "$window_info" | grep 'Window id:' | awk '{print $4}')
-    window_name=$(xprop -id "$window_id" | grep 'WM_NAME(STRING)' | cut -d '"' -f 2)
+    #window_info=$(xwininfo)
+    #window_id=$(echo "$window_info" | grep 'Window id:' | awk '{print $4}')
+    #window_name=$(xprop -id "$window_id" | grep 'WM_NAME(STRING)' | cut -d '"' -f 2)
     
     # Obtém a URL da aba ativa se for um navegador
     
@@ -60,25 +60,21 @@ capturar_area() {
         rm "$screenshot_file"
         yad --info --text="Captura de tela cancelada." --button="gtk-ok:0"
     else
-     
-
-    # Calcula o hash do arquivo de captura de tela
-    hash=$(sha256sum "$screenshot_file" | awk '{print $1}')
-    
-    echo "Hash: $hash"
-    
-    
-    # Salva os dados na tabela screenshot
-    description=$(echo "$description" | sed 's/|//g')
-    echo "DEBUG: SALVANDO NA TABELA__: $screenshot_file" >> "$pasta/odysseus_snap.log"
+        # Calcula o hash do arquivo de captura de tela
+        hash=$(sha256sum "$screenshot_file" | awk '{print $1}')
+        
+        echo "Hash: $hash"
+        
+        # Salva os dados na tabela screenshot
+        description=$(echo "$description" | sed 's/|//g')
+        echo "DEBUG: SALVANDO NA TABELA__: $screenshot_file" >> "$pasta/odysseus_snap.log"
         echo "Arquivo de Captura de Tela: $screenshot_file"
         echo "Nome do Arquivo: $(basename $screenshot_file)"
         echo "Hash: $hash"
         echo "Descrição: $description"
         echo "URL Registro: $urlRegistro"
-    salvar_dados_tabela "$screenshot_file" "$(basename $screenshot_file)" "$hash" "$description" "1" "$urlRegistro"
-          
-        
+        salvar_dados_tabela "$screenshot_file" "$(basename $screenshot_file)" "$hash" "$description" "1" "$urlRegistro"
+              
         yad --info --text="Captura de tela salva em $screenshot_file" --button="gtk-ok:0"
     fi
 
