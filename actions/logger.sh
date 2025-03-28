@@ -10,7 +10,7 @@ gravar_log() {
     local username=$(whoami)
     local ip=$(hostname -I | awk '{print $1}')
     local host=$(hostname)
-    local info_sistema+=" | Username: $username | IP: $ip | Host: $host"
+    local info_sistema="Username: $username, IP: $ip,Host: $host"
 
     # Captura os logs do sistema no período especificado
    
@@ -59,8 +59,11 @@ criar_log_sistema_operacional() {
     logs_sistema=$(journalctl --since "$inicio_periodo" --until "$fim_periodo" --no-pager)
     echo "$logs_sistema" > "$pasta/$log_file"
 
-    echo "Arquivo de log do sistema operacional criado: $log_file"
-    echo "----------Logs do Sistema (Período Especificado)-------------"
-    echo "$logs_sistema"
-    echo "-------------------------------------------------------------"
+    if [ $? -eq 0 ]; then
+        echo "Log do sistema operacional criado com sucesso."
+    else
+        echo "Erro ao criar log do sistema operacional."
+    fi
+    
+    
 }

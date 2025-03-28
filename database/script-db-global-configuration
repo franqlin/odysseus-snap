@@ -1,0 +1,24 @@
+#!/bin/bash
+
+db_path="./global-config.db"
+
+sqlite3 "$db_path" <<EOF
+PRAGMA foreign_keys = ON;
+
+CREATE TABLE IF NOT EXISTS global_report (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    logo TEXT NOT NULL
+);
+
+CREATE TRIGGER IF NOT EXISTS limit_global_report
+BEFORE INSERT ON global_report
+WHEN (SELECT COUNT(*) FROM global_report) >= 1
+BEGIN
+    SELECT RAISE(FAIL, 'Só é permitido um item em global_report');
+END;
+
+INSERT OR IGNORE INTO global_report (id, logo)
+VALUES (1, '../imagens/logo.jpg');
+EOF
+
+echo "Tabela global_report criada com valor inicial e restrição de único registro."

@@ -1,0 +1,50 @@
+#!/bin/bash
+
+# Caminho para o banco de dados
+db_path="../database/global-config.db"
+
+# Função para atualizar o valor do campo logo no banco de dados
+atualizar_logo() {
+    local novo_logo="$1"
+
+    # Verifica se o novo valor do logo foi fornecido
+    if [ -z "$novo_logo" ]; then
+        echo "Erro: O valor do campo 'logo' não foi fornecido."
+        exit 1
+    fi
+
+    # Atualiza o valor no banco de dados
+    sqlite3 "$db_path" <<EOF
+UPDATE global_report
+SET logo = '$novo_logo'
+WHERE id = 1;
+EOF
+
+    if [ $? -eq 0 ]; then
+        echo "Valor do campo 'logo' atualizado com sucesso no banco de dados."
+        yad --info --text="Logo atualizado com sucesso!" --button="OK:0"
+    else
+        echo "Erro ao atualizar o valor do campo 'logo' no banco de dados."
+        yad --error --text="Erro ao atualizar o logo no banco de dados!" --button="OK:1"
+    fi
+}
+
+# Recupera o valor atual do campo logo com id = 1
+logo_atual=$(sqlite3 "$db_path" "SELECT logo FROM global_report WHERE id = 1;")
+
+# Verifica se o valor foi recuperado
+if [ -z "$logo_atual" ]; then
+    echo "Erro: Nenhum valor encontrado para o campo 'logo' com id = 1."
+    yad --error --text="Nenhum valor encontrado para o campo 'logo' com id = 1!" --button="OK:1"
+    exit 1
+fi
+
+# Abre uma janela Yad para o usuário atualizar o valor do campo logo
+novo_logo=$(yad --entry --title="Atualizar Logo" --text="Valor atual do logo: $logo_atual\n\nInsira o novo valor para o logo:" --width=400 --entry-text="$logo_atual")
+
+# Verifica se o usuário cancelou a entrada
+if [ $? -eq 0 ]; then
+    atualizar_logo "$novo_logo"
+else
+    echo "Operação cancelada pelo usuário."
+fi

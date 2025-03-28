@@ -3,7 +3,8 @@ relatorio_final() {
     # Criar uma thread para chamar a função criar_log_sistema_operacional e esperar até que termine
     (
         criar_log_sistema_operacional
-    )
+    ) 
+   
     if [ -z "$pasta" ]; then
         zenity --error --text="Nenhuma pasta selecionada. Selecione uma pasta primeiro."
         return
@@ -23,6 +24,8 @@ relatorio_final() {
 
     TEMP_FILE="$pasta/relatorio_final.html"
     OUTPUT_FILE_PDF="$pasta_saida/relatorio_final.pdf"
+    db_config_path="./database/global-config.db"
+    LOGO_READER_="$(sqlite3 "$db_config_path" "SELECT logo FROM global_report WHERE id=1")"
 
     # Cabeçalho do arquivo HTML
     cat <<EOF > "$TEMP_FILE"
@@ -44,7 +47,8 @@ th { background-color: #f2f2f2; }
 </head>
 <body>
 <div style="text-align: center; font-size: 12px;">
-    <img src="$REPORT_READER" alt="Logo MPRJ" style="width: 711px; height: 106px;"><br> 
+
+    <img src="$LOGO_READER_"><br> 
     <strong>COORDENADORIA DE SEGURANÇA E INTELIGÊNCIA</strong><br>
     DIVISÃO ESPECIAL DE INTELIGÊNCIA CIBERNÉTICA<br>
     Av. Marechal Câmara, 350/8º andar, Centro, Rio de Janeiro – RJ.<br>

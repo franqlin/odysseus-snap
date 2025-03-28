@@ -20,23 +20,23 @@
 sleep 10
 
 # Define the variable 'pasta' with the appropriate path
-pasta="$(dirname "$0")"
+pasta_script="$(dirname "$0")"
 
-source "$pasta/actions/form-data.sh"
-source "$pasta/database/report-data-db.sh"
-source "$pasta/database/screencaption.sh"
-source "$pasta/configurations/config.sh"
-source "$pasta/configurations/programsList.sh"
-source "$pasta/actions/chooseFile.sh"
-source "$pasta/actions/sysInfo.sh"
-source "$pasta/actions/logger.sh"
-source "$pasta/actions/screenshot.sh"
-source "$pasta/actions/report.sh"
-source "$pasta/actions/screencast.sh"
-source "$pasta/actions/httpproxyintersept.sh"
-source "$pasta/actions/requestmonitor.sh"
-source "$pasta/actions/actions.sh"
-source "$pasta/actions/downloads.sh"
+source "$pasta_script/actions/form-data.sh"
+source "$pasta_script/database/report-data-db.sh"
+source "$pasta_script/database/screencaption.sh"
+source "$pasta_script/configurations/config.sh"
+source "$pasta_script/configurations/programsList.sh"
+source "$pasta_script/actions/chooseFile.sh"
+source "$pasta_script/actions/sysInfo.sh"
+source "$pasta_script/actions/logger.sh"
+source "$pasta_script/actions/screenshot.sh"
+source "$pasta_script/actions/report.sh"
+source "$pasta_script/actions/screencast.sh"
+source "$pasta_script/actions/httpproxyintersept.sh"
+source "$pasta_script/actions/requestmonitor.sh"
+source "$pasta_script/actions/actions.sh"
+source "$pasta_script/actions/downloads.sh"
 
 
 # Configura o manipulador de sinal para encerrar o processo de monitoramento ao sair
@@ -105,9 +105,9 @@ while true; do
             fi
             ;;
         "📄 Criar Relatório em PDF")
-            if ! verificar_caso_fechado; then
+           #if ! verificar_caso_fechado; then
                 relatorio_final
-            fi
+           # fi
             ;;    
         "📈 Monitorar Requisições")
             if ! verificar_caso_fechado; then

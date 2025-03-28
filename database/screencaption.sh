@@ -4,7 +4,7 @@ criar_tabela_screencaption() {
     sqlite3 "$db_path" <<EOF
 CREATE TABLE IF NOT EXISTS screencaption (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
-    filename TEXT NOT NULL,salvar_dados_tabela
+    filename TEXT NOT NULL,
     basepath TEXT NOT NULL,
     hash TEXT NOT NULL,
     description TEXT,
@@ -15,6 +15,17 @@ EOF
     echo "Tabela screencaption criada no banco de dados screencaption-db.db."
 }
 salvar_dados_tabela() {
+
+    local  db_path="$pasta/screencaption-db.db"
+
+
+    # Verifica se o banco de dados existe
+    if [ ! -f "$db_path" ]; then
+        echo "Banco de dados '$db_path' não encontrado. Criando banco de dados..."
+        criar_tabela_screencaption
+    fi
+
+  
         local filename="$1"
         local basepath="$2"
         local hash="$3"

@@ -32,7 +32,7 @@ fechar_e_abrir_firefox() {
         # Abre uma nova sessão do Firefox sem abas abertas
         google-chrome --proxy-server="http://localhost:8080" --new-instance about:blank &
         # Cria o arquivo requests.txt na pasta de trabalho e escreve a primeira linha
-        echo "Relatório de Requisição" >> "$pasta/requests.txt"
+        #echo "Relatório de Requisição" >> "$pasta/requests.txt"
         echo "" >> "$pasta/report_build.txt"
         #zenity --info --text="Nova sessão do Firefox iniciada."
     fi
@@ -52,6 +52,7 @@ closedsession() {
     else
         echo "closedsession: $(date)" >> "$session_file"
         zenity --info --text="Sessão fechada com sucesso."
+        gravar_log "Sessão" "Sessão fechada com sucesso."
         parar_interceptacao; 
         
     fi
