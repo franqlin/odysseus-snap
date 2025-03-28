@@ -127,7 +127,8 @@ EOF
         fi
         
         echo "<h4>Metadados:</h4>" >> "$TEMP_FILE"
-        echo "<pre>$(exiftool "$filename")</pre>" >> "$TEMP_FILE"
+        exif_data=$(exiftool "$filename" | awk -F': ' '{printf "<tr><td style=\"border: 1px solid #ddd; padding: 8px;\">%s</td><td style=\"border: 1px solid #ddd; padding: 8px;\">%s</td></tr>", $1, $2}')
+        echo "<table style=\"border-collapse: collapse; width: 100%; font-family: monospace; font-size: 12px;\">$exif_data</table>" >> "$TEMP_FILE"
         echo "<p><strong>SHA256 Hash:</strong> $hash</p>" >> "$TEMP_FILE"
         echo "<hr>" >> "$TEMP_FILE"
     done < <(sqlite3 "$pasta/screencaption-db.db" "SELECT DISTINCT filename, basepath, hash, description, type, urlRegistro FROM screencaption WHERE filename IS NOT NULL AND basepath IS NOT NULL AND hash IS NOT NULL AND type IS NOT NULL;")
@@ -152,7 +153,7 @@ EOF
     done
     echo "</table>" >> "$TEMP_FILE"
      
-    echo "<h2>Logs Ação</h2>" >> "$TEMP_FILE"
+    echo "<h2>Ações</h2>" >> "$TEMP_FILE"
     echo "<table style=\"border-collapse: collapse; width: 100%; font-family: monospace; font-size: 12px;\">" >> "$TEMP_FILE"
     echo "<tr style=\"background-color: #f2f2f2; text-align: left;\">" >> "$TEMP_FILE"
     echo "<th style=\"border: 1px solid #ddd; padding: 8px;\">ID</th>" >> "$TEMP_FILE"
