@@ -21,7 +21,7 @@ sair() {
     echo "Saindo...$LOCKFILE"
     rm -f "$LOCKFILE"
     pkill -f "yad --notification"
-    echo " kill "
+    echo "--kill-- "
     
     exit 0
 }

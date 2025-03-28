@@ -36,6 +36,7 @@ source "$pasta/actions/screencast.sh"
 source "$pasta/actions/httpproxyintersept.sh"
 source "$pasta/actions/requestmonitor.sh"
 source "$pasta/actions/actions.sh"
+source "$pasta/actions/downloads.sh"
 
 
 # Configura o manipulador de sinal para encerrar o processo de monitoramento ao sair
@@ -54,7 +55,8 @@ while true; do
     acao=$(zenity --list --title="Odysseus OSINT Report" --column="Ação" \
         "📝 Editar Referências do Relatório" \
         "📸 Capturar Área da Tela" \
-        "🎥 Gravar Tela" \
+        "🎥  Gravar Tela" \
+        "📥 Registrar Download"\
         "✏️ Editar dados das Capturas" \
         "🗑️ Deletar dados das Capturas" \
         "📂 Abrir Pasta de Trabalho" \
@@ -84,12 +86,17 @@ while true; do
             ;;           
         "📸 Capturar Área da Tela")
             if ! verificar_caso_fechado; then
-                capturar_area
+                 capturar_area
             fi
             ;;
-        "🎥 Gravar Tela")
+        "🎥  Gravar Tela")
             if ! verificar_caso_fechado; then
                 gravar_tela
+            fi
+            ;;
+        "📥 Registrar Download")
+            if ! verificar_caso_fechado; then
+                selecionar_arquivo_e_copiar
             fi
             ;;
         "📂 Abrir Pasta de Trabalho")

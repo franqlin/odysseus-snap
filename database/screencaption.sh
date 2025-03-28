@@ -4,7 +4,7 @@ criar_tabela_screencaption() {
     sqlite3 "$db_path" <<EOF
 CREATE TABLE IF NOT EXISTS screencaption (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
-    filename TEXT NOT NULL,
+    filename TEXT NOT NULL,salvar_dados_tabela
     basepath TEXT NOT NULL,
     hash TEXT NOT NULL,
     description TEXT,
@@ -77,6 +77,7 @@ deletar_dados_tabela_screen(){
    
     # Extraindo o valor do id da linha recebida, considerando que os campos são separados por "|"
     id=$(echo "$1" | cut -d'|' -f1)
+
     echo "Parametro id: $id"
     sqlite3 "$pasta/screencaption-db.db" <<EOF
 DELETE FROM screencaption WHERE id=$id;
@@ -131,4 +132,5 @@ UPDATE screencaption SET description='$description', urlRegistro='$urlRegistro' 
 EOF
 
 yad --info --text="Dados atualizados com sucesso!" --button="OK"
+gravar_log "Dados da Tabela Screencaption" "Dados atualizados com sucesso! $basepath $hash $description $urlRegistro"
 }

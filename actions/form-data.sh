@@ -35,6 +35,7 @@ abrir_formulario() {
                             echo "Registro: $registro"
 
                             alterar_dados_tabela_report_data "$referencia" "$solicitacao" "$registro"
+                            gravar_log "edit_report" "Registro alterado: $referencia, $solicitacao, $registro" 
             }
         else
             # Salva os dados no banco de dados
@@ -54,6 +55,7 @@ abrir_formulario() {
                             echo "Registro: $registro"
                             
                             salvar_dados_tabela_report_data "$referencia" "$solicitacao" "$registro"
+                            gravar_log "add_report" "Registro adicionado: $referencia, $solicitacao, $registro"
              fi
         fi
    

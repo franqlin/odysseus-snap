@@ -14,9 +14,9 @@ gravar_tela() {
     read -r x y width height <<< "$geometry"
 
     # Obtém informações da janela selecionada
-    window_info=$(xwininfo)
-    window_id=$(echo "$window_info" | grep 'Window id:' | awk '{print $4}')
-    window_name=$(xprop -id "$window_id" | grep 'WM_NAME(STRING)' | cut -d '"' -f 2)
+    #window_info=$(xwininfo)
+    #window_id=$(echo "$window_info" | grep 'Window id:' | awk '{print $4}')
+   # window_name=$(xprop -id "$window_id" | grep 'WM_NAME(STRING)' | cut -d '"' -f 2)
 
     # Encontra o próximo número disponível para o screencast
     timestamp=$(date +"%Y%m%d_%H%M%S")
@@ -72,13 +72,7 @@ gravar_tela() {
         yad --info --text="Captura de tela salva em $screencast_file" --button="gtk-ok:0"
     fi
 
-    # Grava log da ação
-    {
-        echo "Janela Selecionada: $window_name"
-        echo "Informações da Janela:"
-        echo "$window_info"
-        echo "URL: $url"
-    } >> "$pasta/odysseus_snap.log"
-    gravar_log "Captura de Tela" "$screencast_file \n $window_info \n JANELA: $url"
-    #echo "CAPTURA_DE_TELA__: $$screencast_file" >> "$pasta/report_build.txt"
+   
+    #gravar_log "Captura de Tela" "$screencast_file \n JANELA: $urlRegistro"
+     gravar_log "Captura de Tela" <br> "$screencast_file <br> Descrição: $description <br> URL Registro: $urlRegistro"
 }

@@ -22,6 +22,7 @@ selecionar_pasta() {
         touch "$session_file"
         echo "opensession: F $(date)" >> "$session_file"
         # Verifica se o arquivo report_build.txt existe
+        gravar_log "opensession" "$session_file" "INFO"
         report_file="$pasta/report_build.txt"
         if [ ! -f "$report_file" ]; then
             touch "$report_file"
@@ -32,12 +33,24 @@ selecionar_pasta() {
         if [ ! -f "$db_path" ]; then
             criar_tabela_screencaption
         fi
+
+        db_path_snap="$pasta/odysseus_snap.db"
+
+        if [ ! -f "$db_path_snap" ]; then
+            criar_tabela_odysseus_snap
+        fi
                 
         db_path_report="$pasta/reportdata-db.db"
         if [ ! -f "db_path_report" ]; then
             criar_tabela_report_data
-        fi      
-        
+        fi
+                     # Verifica se a pasta "download" existe, caso contrário, cria a pasta
+       download_dir="$pasta/downloads"
+        if [ ! -d "$download_dir" ]; then
+            mkdir "$download_dir"
+            echo "Pasta 'downloads' criada em: $download_dir"
+        fi 
+            
 
     else
         # Verifica se o arquivo contém a linha "closedsession"
@@ -49,6 +62,7 @@ selecionar_pasta() {
     
         else
             echo "opensession: R $(date)" >> "$session_file" 
+            gravar_log "opensession" "$session_file" "INFO"
             last_session=$(grep "opensession:" "$session_file" | tail -n 1 | cut -d ' ' -f 3-)
             zenity --info --text="⚠️ Última sessão: $last_session\n\n📂 Pasta de trabalho: $pasta"
             #zenity --info --text=""
@@ -60,6 +74,7 @@ abrir_pasta() {
     if [ -z "$pasta" ]; then
         zenity --error --text="Nenhuma pasta selecionada. Selecione uma pasta primeiro."
     else
+    gravar_log
         xdg-open "$pasta"
     fi
 }
