@@ -62,7 +62,7 @@ selecionar_pasta() {
     
         else
             echo "opensession: R $(date)" >> "$session_file" 
-            gravar_log "opensession" "$session_file" "INFO"
+            gravar_log "opensession" "*" "INFO"
             last_session=$(grep "opensession:" "$session_file" | tail -n 1 | cut -d ' ' -f 3-)
             zenity --info --text="⚠️ Última sessão: $last_session\n\n📂 Pasta de trabalho: $pasta"
             #zenity --info --text=""
@@ -74,7 +74,7 @@ abrir_pasta() {
     if [ -z "$pasta" ]; then
         zenity --error --text="Nenhuma pasta selecionada. Selecione uma pasta primeiro."
     else
-    gravar_log
+    gravar_log "abrir_pasta" "$pasta" "INFO"
         xdg-open "$pasta"
     fi
 }

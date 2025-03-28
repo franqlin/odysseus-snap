@@ -7,8 +7,8 @@ obter_info_sistema() {
     echo "Sistema Operacional: $(uname -o)"
     echo "Kernel: $(uname -r)"
     echo "Arquitetura: $(uname -m)"
-    echo "DNS configurado: $(cat /etc/resolv.conf | grep 'nameserver' | awk '{print $2}')"
-    echo "Gateway padrão: $(ip route | grep 'default' | awk '{print $3}')"
+    #echo "DNS configurado: $(cat /etc/resolv.conf | grep 'nameserver' | awk '{print $2}')"
+    
 }
 
 obter_processos(){
