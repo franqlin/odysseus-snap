@@ -1,87 +1,72 @@
+#!/bin/bash
 
-# Função para abrir um formulário no yad e obter os valores
 abrir_formulario() {
-    
-    
-  
-        
-        # Verifica se já existe um registro com id 1
-        registro_existente=$(sqlite3 $pasta/reportdata-db.db "SELECT COUNT(*) FROM report WHERE id=1;")
-        
-        if [ "$registro_existente" -gt 0 ]; then
-            # Carrega os dados do registro com id 1
-            alterar_registro=$(sqlite3 $pasta/reportdata-db.db "SELECT referencia, solicitacao, registro FROM report WHERE id=1;")
-            referencia=$(echo "$alterar_registro" | awk -F '|' '{print $1}')
-            solicitacao=$(echo "$alterar_registro" | awk -F '|' '{print $2}')
-            registro=$(echo "$alterar_registro" | awk -F '|' '{print $3}')
-            
-            # Abre o formulário para editar os dados
-                        yad --form --title="Editar Registro" --height=400 --width=500 --field="Referência" --field="Solicitação" --field="Registro" --center --button="Salvar:0" --button="Cancelar:1" \
-                            -- "$referencia" "$solicitacao" "$registro" | {
-                            read -r referencia solicitacao registro
-                            
-                            echo " Antes Formulário enviado:"
-                            echo "Referência: $referencia"
-                            echo "Solicitação: $solicitacao"
-                            echo "Registro: $registro"
-                            
-                            referencia=$(echo "$referencia" | tr -d '|')
-                            solicitacao=$(echo "$solicitacao" | tr -d '|')
-                            registro=$(echo "$registro" | tr -d '|')
-                            
-                            echo "Dados alterados:"
-                            echo "Referência: $referencia"
-                            echo "Solicitação: $solicitacao"
-                            echo "Registro: $registro"
+    python3 <<EOF
+import sqlite3
+from tkinter import Tk, Label, Entry, Button, StringVar, messagebox
 
-                            alterar_dados_tabela_report_data "$referencia" "$solicitacao" "$registro"
-                            gravar_log "edit_report" "Registro alterado: $referencia, $solicitacao, $registro" 
-            }
-        else
-            # Salva os dados no banco de dados
-                        formulario=$(yad --form --title="Formulário de Registro" --height=400 --width=500 --field="Referência" --field="Solicitação" --field="Registro" --center)
-                           if [ $? -eq 0 ]; then
-                            referencia=$(echo "$formulario" | awk -F '|' '{print $1}')
-                            solicitacao=$(echo "$formulario" | awk -F '|' '{print $2}')
-                            registro=$(echo "$formulario" | awk -F '|' '{print $3}')
-                            
-                            referencia=$(echo "$referencia" | tr -d '|')
-                            solicitacao=$(echo "$solicitacao" | tr -d '|')
-                            registro=$(echo "$registro" | tr -d '|')
+def salvar_dados(referencia, solicitacao, registro):
+    conn = sqlite3.connect("$pasta/reportdata-db.db")
+    cursor = conn.cursor()
+    cursor.execute("INSERT INTO report (referencia, solicitacao, registro) VALUES (?, ?, ?)", (referencia, solicitacao, registro))
+    conn.commit()
+    conn.close()
+    messagebox.showinfo("Sucesso", "Dados salvos com sucesso!")
+    root.destroy()
 
-                            echo "Dados inseridos:"
-                            echo "Referência: $referencia"
-                            echo "Solicitação: $solicitacao"
-                            echo "Registro: $registro"
-                            
-                            salvar_dados_tabela_report_data "$referencia" "$solicitacao" "$registro"
-                            gravar_log "add_report" "Registro adicionado: $referencia, $solicitacao, $registro"
-             fi
-        fi
-   
-    
-}
+def alterar_dados(referencia, solicitacao, registro):
+    conn = sqlite3.connect("$pasta/reportdata-db.db")
+    cursor = conn.cursor()
+    cursor.execute("UPDATE report SET referencia=?, solicitacao=?, registro=? WHERE id=1", (referencia, solicitacao, registro))
+    conn.commit()
+    conn.close()
+    messagebox.showinfo("Sucesso", "Dados alterados com sucesso!")
+    root.destroy()
 
-alterar_dados_tabela_report_data() {
-    local referencia="$1"
-    local solicitacao="$2"
-    local registro="$3"
-    
-    # Comando SQL para alterar os dados na tabela report-data
-    sqlite3 $pasta/reportdata-db.db <<EOF
-UPDATE "report" SET referencia='$referencia', solicitacao='$solicitacao', registro='$registro' WHERE id=1;      
+conn = sqlite3.connect("$pasta/reportdata-db.db")
+cursor = conn.cursor()
+cursor.execute("SELECT COUNT(*) FROM report WHERE id=1")
+registro_existente = cursor.fetchone()[0]
+
+root = Tk()
+from tkinter import ttk
+
+root.title("Formulário de Registro")
+root.geometry("500x400")
+root.configure(bg="#f0f0f0")
+
+style = ttk.Style()
+style.configure("TLabel", background="#f0f0f0", font=("Arial", 12), anchor="w")
+style.configure("TEntry", font=("Arial", 12))
+style.configure("TButton", font=("Arial", 12), padding=10)
+
+ttk.Label(root, text="Referência:", anchor="w").pack(pady=(10, 2), fill="x", padx=10)
+referencia_var = StringVar()
+referencia_entry = ttk.Entry(root, textvariable=referencia_var, width=50)
+referencia_entry.pack(pady=(0, 10), padx=10)
+
+ttk.Label(root, text="Solicitação:", anchor="w").pack(pady=(10, 2), fill="x", padx=10)
+solicitacao_var = StringVar()
+solicitacao_entry = ttk.Entry(root, textvariable=solicitacao_var, width=50)
+solicitacao_entry.pack(pady=(0, 10), padx=10)
+
+ttk.Label(root, text="Registro:", anchor="w").pack(pady=(10, 2), fill="x", padx=10)
+registro_var = StringVar()
+registro_entry = ttk.Entry(root, textvariable=registro_var, width=50)
+registro_entry.pack(pady=(0, 10), padx=10)
+
+if registro_existente > 0:
+    cursor.execute("SELECT referencia, solicitacao, registro FROM report WHERE id=1")
+    alterar_registro = cursor.fetchone()
+    referencia_var.set(alterar_registro[0])
+    solicitacao_var.set(alterar_registro[1])
+    registro_var.set(alterar_registro[2])
+    Button(root, text="Salvar Alterações", command=lambda: alterar_dados(referencia_var.get(), solicitacao_var.get(), registro_var.get()), font=("Arial", 12), bg="#4CAF50", fg="white").pack(pady=10)
+else:
+    Button(root, text="Salvar", command=lambda: salvar_dados(referencia_var.get(), solicitacao_var.get(), registro_var.get()), font=("Arial", 12), bg="#4CAF50", fg="white").pack(pady=10)
+
+conn.close()
+root.mainloop()
 EOF
+gravar_log "Formulário de Registro" "Dados do formulário foram salvos com sucesso."
 }
-# Função para salvar os dados na tabela report-data
-salvar_dados_tabela_report_data() {
-    local referencia="$1"
-    local solicitacao="$2"
-    local registro="$3"
-    
-    # Comando SQL para inserir os dados na tabela report-data
-    sqlite3 $pasta/reportdata-db.db <<EOF
-
-INSERT INTO "report" (referencia, solicitacao, registro)
-VALUES ('$referencia', '$solicitacao', '$registro');
-EOF
-}   

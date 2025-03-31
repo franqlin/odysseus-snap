@@ -1,3 +1,13 @@
+
+# Verifica se o tkinter está instalado
+if ! python3 -c "import tkinter" &> /dev/null
+then
+    echo "tkinter não está instalado. Instalando..."
+    sudo apt-get install python3-tk -y
+fi
+
+#sudo apt-get install python3-tk
+
 # Verifica se o scrot está instalado
 if ! command -v scrot &> /dev/null
 then

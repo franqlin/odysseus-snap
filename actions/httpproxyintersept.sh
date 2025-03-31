@@ -71,5 +71,5 @@ if pgrep zenity > /dev/null; then
     pkill zenity
     echo
 fi
-   gravar_log "Closed" "*"   
+   gravar_log "Closed" " - "   
 }

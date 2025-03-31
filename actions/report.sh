@@ -12,8 +12,11 @@ relatorio_final() {
     # Criar uma thread para chamar a função criar_log_sistema_operacional e esperar até que termine
     (
         criar_log_sistema_operacional
-    ) 
-   
+        
+    )
+    # Espera a thread terminar
+    echo " log do SO Criado .." 
+    gravar_log "Criação de Relatório Final" "$OUTPUT_FILE_PDF"
     if [ -z "$pasta" ]; then
         zenity --error --text="Nenhuma pasta selecionada. Selecione uma pasta primeiro."
         return
@@ -64,19 +67,19 @@ li{ font-size: 12px; text-indent: 40px;align: justify; }
     <strong>COORDENADORIA DE SEGURANÇA E INTELIGÊNCIA</strong><br>
     DIVISÃO ESPECIAL DE INTELIGÊNCIA CIBERNÉTICA<br>
     Av. General Justo, 375/5º andar, Centro, Rio de Janeiro – RJ.<br>
-    Telefones: 2292-8459 - e-mail: <a href="mailto:csi.deic@mprj.mp.br">csi.deic@mprj.mp.br</a>
+    Telefones: (21) 2292-8459 - e-mail: <a href="mailto:csi.deic@mprj.mp.br">csi.deic@mprj.mp.br</a>
 </div>
 <div style="text-align: right;">
     <p><strong>Rio de Janeiro,</strong> $(date +"%d de %B de %Y")</p>
 </div>
 <br>
-<div style="font-family: monospace; line-height: 0.3;">
+<div style="font-family: monospace; line-height: .9; white-space: pre-wrap;">
 EOF
 
     while IFS="|" read -r referencia solicitacao registro; do
         echo "<p style=\"text-indent: 1px;\"  ><strong>Referência:</strong> $referencia</p>" >> "$TEMP_FILE"
         echo "<p style=\"text-indent: 1px;\" ><strong>Solicitação:</strong> $solicitacao</p>" >> "$TEMP_FILE"
-        echo "<pstyle=\"text-indent: 1px;\"><strong>Registro Interno:</strong> $registro</p>" >> "$TEMP_FILE"
+        echo "<p style=\"text-indent: 1px;\"><strong>Registro Interno:</strong> $registro</p>" >> "$TEMP_FILE"
     done < <(sqlite3 "$pasta/reportdata-db.db" "SELECT referencia, solicitacao, registro FROM report;")
 
 cat <<EOF >> "$TEMP_FILE"
@@ -87,8 +90,8 @@ cat <<EOF >> "$TEMP_FILE"
 <br>
 <h2>Informações do Sistema</h2>
 <pre>$(obter_info_sistema)</pre>
-<p>As Informações do Sistema descrevem o ambiente técnico onde a coleta de vestígios digitais foi realizada, incluindo o nome do host , o usuário logado, o endereço IP ,
- o sistema operacional , a arquitetura do processador e o servidor DNS configurado. Esses dados são essenciais para garantir a rastreabilidade, integridade e contextualização 
+<p>As Informações do Sistema descrevem o ambiente técnico onde a coleta de vestígios digitais foi realizada, incluindo o nome do host, usuário logado, endereço IP,
+ sistema operacional, arquitetura do processador e o servidor DNS configurado. Esses dados são essenciais para garantir a rastreabilidade, integridade e contextualização 
  da análise, assegurando que os resultados sejam confiáveis e replicáveis.</p> 
 <h2>Introdução Técnica</h2>
 <p> Este relatório apresenta uma análise detalhada dos arquivos, metadados, logs e capturas de tela coletados durante o processo de coleta. 
@@ -145,10 +148,14 @@ EOF
         mkdir -p "$pasta_saida/downloads"
         cp "$filename" "$pasta_saida/downloads/"
         echo "<tr><th style=\"border: 1px solid #ddd; padding: 8px;\">Download</th><td style=\"border: 1px solid #ddd; padding: 8px;\"><a href=\"./downloads/$(basename "$filename")\">$(basename "$filename")</a></td></tr>" >> "$TEMP_FILE"
-         if [ -n "$description" ]; then
+        if [ -n "$description" ]; then
             echo "<tr><th style=\"border: 1px solid #ddd; padding: 8px;\">Descrição</th><td style=\"border: 1px solid #ddd; padding: 8px;\">$description</td></tr>" >> "$TEMP_FILE"
         fi
+        
+    
+        echo "<tr><th style=\"border: 1px solid #ddd; padding: 8px;\">Observações Técnicas</th><td style=\"border: 1px solid #ddd; padding: 8px;\">Os arquivos classificados como 'downloads' são aqueles obtidos diretamente por meio de extensões ou plugins do navegador. Esses arquivos podem incluir dados relevantes para a análise, como documentos, imagens ou outros tipos de mídia baixados durante a navegação. A rastreabilidade desses downloads é garantida pelos logs de requisições, que documentam as URLs de origem e os parâmetros associados a cada download.</td></tr>" >> "$TEMP_FILE"
     fi
+
     echo "<tr><th style=\"border: 1px solid #ddd; padding: 8px;\">Hash SHA-256</th><td style=\"border: 1px solid #ddd; padding: 8px;\">$hash</td></tr>" >> "$TEMP_FILE"
 
     echo "</table>" >> "$TEMP_FILE"
@@ -330,39 +337,45 @@ cat <<EOF >> "$TEMP_FILE"
 
 EOF
 
-    # Converter o relatório para PDF usando wkhtmltopdf
-    wkhtmltopdf --enable-local-file-access --keep-relative-links \
-     --footer-left "MPRJ" \
-     --footer-right "[page]/[toPage]" \
-     --footer-center "Divisão Especial de Inteligência Cibernética" \
-     --footer-font-size 8 \
-     --footer-spacing 5 \
-     --footer-line \
-     --margin-top "20mm" \
-     --margin-bottom "20mm" \
-     --margin-left "20mm" \
-     --margin-right "20mm" \
-     "$TEMP_FILE" "$OUTPUT_FILE_PDF"
-
-    # Remover o arquivo temporário
-    mv "$TEMP_FILE" "$pasta_saida/relatorio_final_$(date +"%Y%m%d_%H%M%S").html"
+    (
+        # Exibir barra de progresso enquanto os processos são executados
+        (
+            echo "10"; sleep 1
+            echo "# Convertendo o relatório para PDF..."
+            wkhtmltopdf --enable-local-file-access --keep-relative-links \
+             --footer-left "MPRJ" \
+             --footer-right "[page]/[toPage]" \
+             --footer-center "Divisão Especial de Inteligência Cibernética" \
+             --footer-font-size 8 \
+             --footer-spacing 5 \
+             --footer-line \
+             --margin-top "20mm" \
+             --margin-bottom "20mm" \
+             --margin-left "20mm" \
+             --margin-right "20mm" \
+             "$TEMP_FILE" "$OUTPUT_FILE_PDF"
+            echo "50"; sleep 1
+            echo "# Movendo o arquivo temporário..."
+            mv "$TEMP_FILE" "$pasta_saida/relatorio_final_$(date +"%Y%m%d_%H%M%S").html"
+            echo "70"; sleep 1
+            echo "# Criando pastas de saída e copiando arquivos..."
+            mkdir -p "$pasta_saida/logs"
+            cp "$pasta/requests.txt" "$pasta_saida/logs/"
+            cp "$pasta/odysseus_snap.log" "$pasta_saida/logs/"
+            cp "$pasta/LogSistemaOperacional.log" "$pasta_saida/logs/"
+            echo "90"; sleep 1
+            echo "# Gerando glossário técnico..."
+            imprimir_glossario
+            echo "100"; sleep 1
+        ) | zenity --progress --title="Processando Relatório" --text="Aguarde enquanto o relatório é gerado..." --percentage=0 --auto-close --no-cancel
+    )
 
     # Informar ao usuário que o relatório foi gerado
     zenity --info --text="Relatório final gerado em $OUTPUT_FILE_PDF"
-     
-    # Criar as pastas de saída
-    mkdir -p "$pasta_saida/logs"
 
-    # Copiar arquivos para as respectivas pastas
-    cp "$pasta/requests.txt" "$pasta_saida/logs/"
-    cp "$pasta/odysseus_snap.log" "$pasta_saida/logs/"
-    cp "$pasta/LogSistemaOperacional.log" "$pasta_saida/logs/"
-    
-    # Criar o arquivo PDF do relatório
     # Abrir o relatório PDF gerado com a aplicação padrão
     xdg-open "$OUTPUT_FILE_PDF"
-    imprimir_glossario
-    gravar_log "Criação de Relatório Final" "$OUTPUT_FILE_PDF"
+   
 
 }
 imprimir_glossario() {
@@ -389,7 +402,7 @@ img { max-width: 100%; height: auto; }
     <strong>COORDENADORIA DE SEGURANÇA E INTELIGÊNCIA</strong><br>
     DIVISÃO ESPECIAL DE INTELIGÊNCIA CIBERNÉTICA<br>
     Av. General Justo, 375/5º andar, Centro, Rio de Janeiro – RJ.<br>
-    Telefones: 2292-8459 - e-mail: <a href="mailto:csi.deic@mprj.mp.br">csi.deic@mprj.mp.br</a>
+    Telefones: (21) 2292-8459 - e-mail: <a href="mailto:csi.deic@mprj.mp.br">csi.deic@mprj.mp.br</a>
 </div>
 <h2>Glossário Técnico</h2>
 <ul>
@@ -410,7 +423,23 @@ img { max-width: 100%; height: auto; }
     <li><strong>Sistema Operacional (GNU/Linux):</strong> O software básico que gerencia os recursos de hardware e software de um computador.</li>
     <li><strong>Traceroute:</strong> Ferramenta que rastreia o caminho que os pacotes de dados seguem de um dispositivo para outro na internet.</li>
     <li><strong>WHOIS:</strong> Protocolo usado para consultar informações sobre domínios registrados, como proprietário e data de registro.</li>
-    <li><strong>Zenity:</strong> Ferramenta que permite exibir caixas de diálogo gráficas a partir de scripts de shell.</li>
+    <li><strong>Google Chrome:</strong> Um navegador web desenvolvido pela Google, conhecido por sua velocidade, simplicidade e suporte a extensões. Ele utiliza o motor de renderização Blink e é amplamente utilizado para navegação na internet. Para mais informações, consulte a <a href="https://pt.wikipedia.org/wiki/Google_Chrome" target="_blank">página do Google Chrome na Wikipédia</a>.</li>
+    <li><strong>Firefox:</strong> Um navegador web de código aberto desenvolvido pela Mozilla Foundation, conhecido por sua privacidade e personalização. Ele utiliza o motor de renderização Gecko e é amplamente utilizado para navegação na internet. Para mais informações, consulte a <a href="https://pt.wikipedia.org/wiki/Firefox" target="_blank">página do Firefox na Wikipédia</a>.</li>
+    <li><strong>Extensões do Google Chrome:</strong> Ferramentas adicionais que podem ser instaladas no navegador Google Chrome para adicionar funcionalidades ou modificar o comportamento do navegador. Elas podem ser usadas para capturar dados, modificar páginas da web ou melhorar a experiência do usuário. Para mais informações, consulte a <a href="https://support.google.com/chrome_webstore/answer/2664769?hl=pt-BR" target="_blank">página de suporte do Google Chrome Web Store</a>.</li>
+    <li><strong>Extensões do Firefox:</strong> Ferramentas adicionais que podem ser instaladas no navegador Firefox para adicionar funcionalidades ou modificar o comportamento do navegador. Elas podem ser usadas para capturar dados, modificar páginas da web ou melhorar a experiência do usuário. Para mais informações, consulte a <a href="https://support.mozilla.org/pt-BR/kb/instalar-extensoes-firefox" target="_blank">página de suporte do Firefox</a>.</li>
+    <li><strong>Captura de Tela:</strong> Uma imagem do que está sendo exibido na tela de um dispositivo em um determinado momento. É frequentemente usada para documentar atividades ou compartilhar informações visuais.</li>
+    <li><strong>Captura de Vídeo:</strong> Um registro em movimento do que está sendo exibido na tela de um dispositivo. É frequentemente usada para documentar atividades ou compartilhar informações visuais em tempo real.</li>
+    <li><strong>Captura de Dados:</strong> O processo de coletar informações de um dispositivo ou sistema, que pode incluir arquivos, logs, metadados e outros dados relevantes.</li>
+    <li><strong>Captura de Rede:</strong> O processo de monitorar e registrar o tráfego de dados que passa por uma rede, permitindo a análise de comunicações e atividades online.</li> 
+    <li><strong>Captura de Pacotes:</strong> O processo de interceptar e registrar pacotes de dados que trafegam em uma rede, permitindo a análise detalhada do tráfego de rede.</li>
+    <li><strong>Captura de Tráfego:</strong> O processo de monitorar e registrar o tráfego de dados que passa por uma rede, permitindo a análise de comunicações e atividades online.</li>
+    <li><strong>Captura de Dados de Navegação:</strong> O processo de coletar informações sobre as atividades de um usuário em um navegador, incluindo URLs acessadas, cookies e downloads.</li>            
+    <li><strong>Captura de Dados de Extensões:</strong> O processo de coletar informações sobre as atividades de um usuário em extensões do navegador, incluindo URLs acessadas, cookies e downloads.</li>
+    <li><strong>Captura de Dados de Cookies:</strong> O processo de coletar informações armazenadas em cookies, que são pequenos arquivos de texto usados por sites para armazenar informações sobre o usuário.</li>    
+    <li><strong>Captura de Dados de Downloads:</strong> O processo de coletar informações sobre arquivos baixados por um usuário, incluindo nomes de arquivos, tamanhos e locais de armazenamento.</li>
+    <li><strong>Captura de Dados de Histórico:</strong> O processo de coletar informações sobre as páginas visitadas por um usuário em um navegador, incluindo URLs, horários e durações de visita.</li>    
+    <li><strong>Captura de Dados de Favoritos:</strong> O processo de coletar informações sobre os sites marcados como favoritos por um usuário em um navegador, incluindo URLs e nomes de páginas.</li>    
+    
 </ul>
 </body>
 </html>

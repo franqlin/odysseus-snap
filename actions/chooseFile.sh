@@ -39,6 +39,11 @@ selecionar_pasta() {
         if [ ! -f "$db_path_snap" ]; then
             criar_tabela_odysseus_snap
         fi
+        db_path="$pasta/odysseus_snap.db"
+        if [ ! -f "$db_path" ]; then
+            criar_banco_de_dados
+        fi
+        
                 
         db_path_report="$pasta/reportdata-db.db"
         if [ ! -f "db_path_report" ]; then
@@ -62,7 +67,7 @@ selecionar_pasta() {
     
         else
             echo "opensession: R $(date)" >> "$session_file" 
-            gravar_log "opensession" "*" "INFO"
+            gravar_log "opensession" "- "
             last_session=$(grep "opensession:" "$session_file" | tail -n 1 | cut -d ' ' -f 3-)
             zenity --info --text="⚠️ Última sessão: $last_session\n\n📂 Pasta de trabalho: $pasta"
             #zenity --info --text=""
@@ -74,7 +79,7 @@ abrir_pasta() {
     if [ -z "$pasta" ]; then
         zenity --error --text="Nenhuma pasta selecionada. Selecione uma pasta primeiro."
     else
-    gravar_log "abrir_pasta" "$pasta" "INFO"
+    gravar_log "abrir_pasta" "$pasta" 
         xdg-open "$pasta"
     fi
 }

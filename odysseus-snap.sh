@@ -58,7 +58,6 @@ while true; do
         "🎥  Gravar Tela" \
         "📥 Registrar Download"\
         "✏️ Editar dados das Capturas" \
-        "🗑️ Deletar dados das Capturas" \
         "📂 Abrir Pasta de Trabalho" \
         "📈 Monitorar Requisições" \
         "📄 Criar Relatório em PDF" \
@@ -78,12 +77,7 @@ while true; do
             if ! verificar_caso_fechado; then
                 exibir_dados_tabela_screen
             fi
-            ;;
-         "🗑️ Deletar dados das Capturas")
-            if ! verificar_caso_fechado; then
-                exibir_deletar_dados_tabela_screen
-            fi
-            ;;           
+            ;;         
         "📸 Capturar Área da Tela")
             if ! verificar_caso_fechado; then
                  capturar_area

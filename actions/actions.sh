@@ -53,7 +53,7 @@ closedsession() {
         echo "closedsession: $(date)" >> "$session_file"
         zenity --info --text="Sessão fechada com sucesso."
         timestamp=$(date '+%Y-%m-%d %H:%M:%S')
-        gravar_log "Sessão" "Caso fechado por definitivo em $timestamp."
+        gravar_log "Sessão" "Caso fechado por definitivo."
         parar_interceptacao; 
         
     fi

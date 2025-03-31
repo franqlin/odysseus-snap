@@ -85,6 +85,6 @@ capturar_area() {
         echo "$window_info"
         echo "URL: $url"
     } >> "$pasta/odysseus_snap.log"
-    gravar_log "Captura de Tela" "$screenshot_file \n $window_info \n JANELA: $url"
+    gravar_log "Captura de Tela" "$screenshot_file   $url"
     #echo "CAPTURA_DE_TELA__: $screenshot_file" >> "$pasta/report_build.txt"
 }

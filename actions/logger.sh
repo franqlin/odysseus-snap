@@ -4,8 +4,8 @@ gravar_log() {
     local arquivo=$2
 
     local data_hora=$(date '+%Y-%m-%d %H:%M:%S')
-    local inicio_periodo=$(date --date="7 days ago" '+%Y-%m-%d %H:%M:%S')
-    local fim_periodo=$(date '+%Y-%m-%d %H:%M:%S')
+    #local inicio_periodo=$(date --date="7 days ago" '+%Y-%m-%d %H:%M:%S')
+    #local fim_periodo=$(date '+%Y-%m-%d %H:%M:%S')
     
     local username=$(whoami)
     local ip=$(hostname -I | awk '{print $1}')
@@ -50,7 +50,22 @@ EOF
 
 # Função para criar log do sistema operacional
 criar_log_sistema_operacional() {
+
+
     db_path="$pasta/odysseus_snap.db"
+    # Verifica se o arquivo do banco de dados já existe
+
+    # Cria um novo banco de dados
+    if [ ! -f "$db_path" ]; then
+        echo "Banco de dados não encontrado. Criando banco de dados..."
+        criar_banco_de_dados
+    fi
+    # Verifica se a tabela logs existe
+    if ! sqlite3 "$db_path" "SELECT name FROM sqlite_master WHERE type='table' AND name='logs';" | grep -q "logs"; then
+        echo "Tabela 'logs' não encontrada. Criando tabela..."
+        criar_tabela_logs
+    fi
+
     local inicio_periodo=$(sqlite3 "$db_path" "SELECT MIN(data_hora) FROM logs;" )
     local fim_periodo=$(sqlite3 "$db_path" "SELECT MAX(data_hora) FROM logs;")
     local log_file="LogSistemaOperacional.log"

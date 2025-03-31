@@ -74,5 +74,5 @@ gravar_tela() {
 
    
     #gravar_log "Captura de Tela" "$screencast_file \n JANELA: $urlRegistro"
-     gravar_log "Captura de Tela" <br> "$screencast_file <br> Descrição: $description <br> URL Registro: $urlRegistro"
+     gravar_log "Captura de Tela" <br> "$screencast_file  Descrição: $description URL Registro: $urlRegistro"
 }
