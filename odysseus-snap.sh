@@ -57,6 +57,7 @@ while true; do
         "📸 Capturar Área da Tela" \
         "🎥  Gravar Tela" \
         "📥 Registrar Download"\
+        "📂 Registrar Pasta" \
         "✏️ Editar dados das Capturas" \
         "📂 Abrir Pasta de Trabalho" \
         "📈 Monitorar Requisições" \
@@ -91,6 +92,11 @@ while true; do
         "📥 Registrar Download")
             if ! verificar_caso_fechado; then
                 selecionar_arquivo_e_copiar
+            fi
+            ;;
+        "📂 Registrar Pasta")
+            if ! verificar_caso_fechado; then
+                selecionar_pasta_e_processar_arquivos
             fi
             ;;
         "📂 Abrir Pasta de Trabalho")

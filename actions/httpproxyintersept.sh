@@ -32,7 +32,7 @@ def request(flow: http.HTTPFlow) -> None:
         log_message = f"Data e Hora: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\n"
         log_message += f"link: {flow.request.pretty_url}\n"
         log_message += f"Referer: {flow.request.headers['Referer']}\n"
-        #log_message += f"Cabeçalho: {flow.request.headers}\n\n"
+        log_message += f"Cabeçalho: {flow.request.headers}\n\n"
         
         # Escreve no arquivo request.txt
         with open("$output_log", "a") as file:

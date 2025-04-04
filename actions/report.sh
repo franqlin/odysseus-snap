@@ -10,10 +10,7 @@ relatorio_final() {
         ) | zenity --progress --title="Gerando Relatório" --text="Aguarde enquanto o relatório é elaborado..." --percentage=0 --auto-close --no-cancel
     ) &
     # Criar uma thread para chamar a função criar_log_sistema_operacional e esperar até que termine
-    (
-        criar_log_sistema_operacional
-        
-    )
+
     # Espera a thread terminar
     echo " log do SO Criado .." 
     gravar_log "Criação de Relatório Final" "$OUTPUT_FILE_PDF"
@@ -25,14 +22,7 @@ relatorio_final() {
     pasta_saida="$pasta/relatorio_$(date +"%Y%m%d_%H%M%S")"
     mkdir -p "$pasta_saida"
     
-    report_file="$pasta/report_build.txt"
-    if [ ! -f "$report_file" ]; then
-        zenity --error --text="Arquivo report_build.txt não encontrado na pasta de trabalho."
-        return
-    fi
-
-    # Remove linhas em branco do arquivo report_build.txt
-    sed -i '/^$/d' "$report_file"
+ 
 
     TEMP_FILE="$pasta/relatorio_final.html"
     OUTPUT_FILE_PDF="$pasta_saida/relatorio_final.pdf"
@@ -113,109 +103,99 @@ Para assegurar a integridade e a autenticidade dos dados, foram aplicadas funç�
     Essa característica torna as funções hash uma ferramenta essencial para <strong>verificar a integridade</strong> de arquivos, detectar adulterações e garantir a autenticidade dos dados.</p>
 <h2>Arquivos coletados</h2>
 EOF
-
+    (
+        (
+            echo "10"; sleep 1
+            echo "# Criando pastas de saída..."
+            for dir in downloads images videos; do
+                if [ -d "$pasta/$dir" ]; then
+                    cp -r "$pasta/$dir" "$pasta_saida"
+                else
+                    echo "Diretório $pasta/$dir não encontrado. Pulando..."
+                fi
+            done
+            echo "100"; sleep 1
+        ) | zenity --progress --title="Copiando Arquivos" --text="Aguarde enquanto os arquivos são copiados..." --percentage=0 --auto-close --no-cancel
+    )
+    sqlite3 "$pasta/screencaption-db.db" "SELECT DISTINCT filename, basepath, hash, description, type, urlRegistro FROM screencaption;" > /tmp/screencaption_data.txt
     while IFS="|" read -r filename basepath hash description type urlRegistro; do
-    
-    echo "<table style=\"border-collapse: collapse; width: 100%; font-family: monospace; font-size: 12px; border: 1px solid #ddd;\">" >> "$TEMP_FILE"
-    echo "<tr><th style=\"border: 1px solid #ddd; padding: 8px;\">Nome do Arquivo</th><td style=\"border: 1px solid #ddd; padding: 8px;\">$(basename "$filename")</td></tr>" >> "$TEMP_FILE"
-    
-    if [ -n "$urlRegistro" ]; then
-        echo "<tr><th style=\"border: 1px solid #ddd; padding: 8px;\">Referência</th><td style=\"border: 1px solid #ddd; padding: 8px;\"><a href=\"$urlRegistro\">$urlRegistro</a></td></tr>" >> "$TEMP_FILE"
-    fi   
+        {
+            echo "<table style=\"border-collapse: collapse; width: 100%; font-family: monospace; font-size: 12px; border: 1px solid #ddd;\">"
+            echo "<tr><th style=\"border: 1px solid #ddd; padding: 8px;\">Nome do Arquivo</th><td style=\"border: 1px solid #ddd; padding: 8px;\">$(basename "$filename")</td></tr>"
+            
+            [ -n "$urlRegistro" ] && echo "<tr><th style=\"border: 1px solid #ddd; padding: 8px;\">Referência</th><td style=\"border: 1px solid #ddd; padding: 8px;\"><a href=\"$urlRegistro\">$urlRegistro</a></td></tr>"
 
-    if [[ "$type" == "1" ]]; then
-        echo "<tr><th style=\"border: 1px solid #ddd; padding: 8px;\">Imagem</th><td style=\"border: 1px solid #ddd; padding: 8px;\"><img src=\"file://$(realpath "$filename")\" alt=\"$(basename "$filename")\" style=\"width:300px;height:auto;\"></td></tr>" >> "$TEMP_FILE"
-        mkdir -p "$pasta_saida/imagens"
-        cp "$filename" "$pasta_saida/imagens/"
-        echo "<tr><th style=\"border: 1px solid #ddd; padding: 8px;\">Link</th><td style=\"border: 1px solid #ddd; padding: 8px;\"><a href=\"./imagens/$(basename "$filename")\">$(basename "$filename")</a></td></tr>" >> "$TEMP_FILE"
+            case "$type" in
+            1)
+                echo "<tr><th style=\"border: 1px solid #ddd; padding: 8px;\">Imagem</th><td style=\"border: 1px solid #ddd; padding: 8px;\"><img src=\"./images/$(basename "$filename")\" alt=\"$(basename "$filename")\" style=\"width:300px;height:auto;\"></td></tr>"
+                echo "<tr><th style=\"border: 1px solid #ddd; padding: 8px;\">Link</th><td style=\"border: 1px solid #ddd; padding: 8px;\"><a href=\"./images/$(basename "$filename")\">$(basename "$filename")</a></td></tr>"
+                ;;
+            2)
+                echo "<tr><th style=\"border: 1px solid #ddd; padding: 8px;\">Vídeo</th><td style=\"border: 1px solid #ddd; padding: 8px;\"><img src=\"https://img.icons8.com/ios-filled/50/000000/video.png\" alt=\"Thumbnail\" style=\"width:50px;height:auto;\"></td></tr>"
+                echo "<tr><th style=\"border: 1px solid #ddd; padding: 8px;\">Link</th><td style=\"border: 1px solid #ddd; padding: 8px;\"><a href=\"./videos/$(basename "$filename")\">$(basename "$filename")</a></td></tr>"
+                ;;
+            3)
+                if [[ "$filename" =~ \.(jpg|jpeg|png|gif|bmp|tiff|webp)$ ]]; then
+                echo "<tr><th style=\"border: 1px solid #ddd; padding: 8px;\">Imagem</th><td style=\"border: 1px solid #ddd; padding: 8px;\"><img src=\"./downloads/$(basename "$filename")\" alt=\"$(basename "$filename")\" style=\"width:300px;height:auto;\"></td></tr>"
+                elif [[ "$filename" =~ \.(mp4|mkv|avi|mov|wmv|flv|webm)$ ]]; then
+                echo "<tr><th style=\"border: 1px solid #ddd; padding: 8px;\">Vídeo</th><td style=\"border: 1px solid #ddd; padding: 8px;\"><img src=\"https://img.icons8.com/ios-filled/50/000000/video.png\" alt=\"Thumbnail\" style=\"width:50px;height:auto;\"></td></tr>"
+                fi
+                echo "<tr><th style=\"border: 1px solid #ddd; padding: 8px;\">Download</th><td style=\"border: 1px solid #ddd; padding: 8px;\"><a href=\"./downloads/$(basename "$filename")\">$(basename "$filename")</a></td></tr>"
+                ;;
+            esac
+
+            [ -n "$description" ] && echo "<tr><th style=\"border: 1px solid #ddd; padding: 8px;\">Descrição</th><td style=\"border: 1px solid #ddd; padding: 8px;\">$description</td></tr>"
+            echo "<tr><th style=\"border: 1px solid #ddd; padding: 8px;\">Hash SHA-256</th><td style=\"border: 1px solid #ddd; padding: 8px;\">$hash</td></tr>"
+            echo "</table>"
+
+            if [ -n "$urlRegistro" ]; then
+                host=$(echo "$urlRegistro" | awk -F/ '{print $3}')
+                if [[ "$host" =~ ^(([a-zA-Z0-9-]+\.)+[a-zA-Z]{2,}|[0-9]{1,3}(\.[0-9]{1,3}){3})$ ]]; then
+                    traceroute_output=$(traceroute "$host")
+                    echo "<h4>Traceroute para $host:</h4>"
+                    echo "<pre>$traceroute_output</pre>"
+                    whois_output=$(whois "$host")
+                    echo "<h4>WHOIS para $host:</h4>"
+                    echo "<pre>$whois_output</pre>"
+                fi
+            fi
+
+            echo "<h4>Metadados:</h4>"
+            echo "<pre style=\"font-family: monospace; font-size: 9px; background-color:#f4f4f4; padding: 10px; border: 1px solid #ddd;\">"
+            exiftool -t "$filename"
+            echo "</pre>"
+            echo "<hr>"
+        } >> "$TEMP_FILE"
+    done < /tmp/screencaption_data.txt
+
+    {
+        echo "<h2>Logs de Navegação</h2>"
+        echo "<p>Os logs de navegação são registros detalhados das atividades realizadas por um usuário em um navegador ou dispositivo...</p>"
+        echo "<h2>Arquivos de Logs</h2>"
+        echo "<table style=\"border-collapse: collapse; width: 95%; font-family: monospace; font-size: 10px;\">"
+        echo "<tr style=\"background-color: #f2f2f2; text-align: left;\"><th style=\"border: 1px solid #ddd; padding: 8px;\">Arquivo</th><th style=\"border: 1px solid #ddd; padding: 8px;\">Hash SHA-256</th></tr>"
         
-        if [ -n "$description" ]; then
-            echo "<tr><th style=\"border: 1px solid #ddd; padding: 8px;\">Descrição</th><td style=\"border: 1px solid #ddd; padding: 8px;\">$description</td></tr>" >> "$TEMP_FILE"
-        fi
-    fi
-
-    if [[ "$type" == "2" ]]; then
-        echo "<tr><th style=\"border: 1px solid #ddd; padding: 8px;\">Vídeo</th><td style=\"border: 1px solid #ddd; padding: 8px;\"><img src=\"https://img.icons8.com/ios-filled/50/000000/video.png\" alt=\"Thumbnail\" style=\"width:50px;height:auto;\"></td></tr>" >> "$TEMP_FILE"
-        mkdir -p "$pasta_saida/videos"
-        cp "$filename" "$pasta_saida/videos/"
-        echo "<tr><th style=\"border: 1px solid #ddd; padding: 8px;\">Link</th><td style=\"border: 1px solid #ddd; padding: 8px;\"><a href=\"./videos/$(basename "$filename")\">$(basename "$filename")</a></td></tr>" >> "$TEMP_FILE"
-        if [ -n "$description" ]; then
-            echo "<tr><th style=\"border: 1px solid #ddd; padding: 8px;\">Descrição</th><td style=\"border: 1px solid #ddd; padding: 8px;\">$description</td></tr>" >> "$TEMP_FILE"
-        fi
-    fi
-
-    if [[ "$type" == "3" ]]; then
-        mkdir -p "$pasta_saida/downloads"
-        cp "$filename" "$pasta_saida/downloads/"
-        echo "<tr><th style=\"border: 1px solid #ddd; padding: 8px;\">Download</th><td style=\"border: 1px solid #ddd; padding: 8px;\"><a href=\"./downloads/$(basename "$filename")\">$(basename "$filename")</a></td></tr>" >> "$TEMP_FILE"
-        if [ -n "$description" ]; then
-            echo "<tr><th style=\"border: 1px solid #ddd; padding: 8px;\">Descrição</th><td style=\"border: 1px solid #ddd; padding: 8px;\">$description</td></tr>" >> "$TEMP_FILE"
-        fi
+        for log_file in "$pasta/requests.txt" "$pasta/odysseus_snap.log" "$pasta/LogSistemaOperacional.log"; do
+            if [ -f "$log_file" ]; then
+                hash=$(sha256sum "$log_file" | cut -d' ' -f1)
+                echo "<tr><td style=\"border: 1px solid #ddd; padding: 8px;\"><a href=\"./logs/$(basename "$log_file")\">$(basename "$log_file")</a></td><td style=\"border: 1px solid #ddd; padding: 8px;\">$hash</td></tr>"
+            fi
+        done
         
-    
-        echo "<tr><th style=\"border: 1px solid #ddd; padding: 8px;\">Observações Técnicas</th><td style=\"border: 1px solid #ddd; padding: 8px;\">Os arquivos classificados como 'downloads' são aqueles obtidos diretamente por meio de extensões ou plugins do navegador. Esses arquivos podem incluir dados relevantes para a análise, como documentos, imagens ou outros tipos de mídia baixados durante a navegação. A rastreabilidade desses downloads é garantida pelos logs de requisições, que documentam as URLs de origem e os parâmetros associados a cada download.</td></tr>" >> "$TEMP_FILE"
-    fi
+        echo "</table>"
+    } >> "$TEMP_FILE"
 
-    echo "<tr><th style=\"border: 1px solid #ddd; padding: 8px;\">Hash SHA-256</th><td style=\"border: 1px solid #ddd; padding: 8px;\">$hash</td></tr>" >> "$TEMP_FILE"
-
-    echo "</table>" >> "$TEMP_FILE"
-
-    if [ -n "$urlRegistro" ]; then
-        host=$(echo "$urlRegistro" | awk -F/ '{print $3}')
-        if [[ "$host" =~ ^(([a-zA-Z0-9-]+\.)+[a-zA-Z]{2,}|[0-9]{1,3}(\.[0-9]{1,3}){3})$ ]]; then
-        traceroute_output=$(traceroute "$host")
-        echo "<h4>Traceroute para $host:</h4>" >> "$TEMP_FILE"
-        echo "<pre>$traceroute_output</pre>" >> "$TEMP_FILE"
-        whois_output=$(whois "$host")
-        echo "<h4>WHOIS para $host:</h4>" >> "$TEMP_FILE"
-        echo "<pre>$whois_output</pre>" >> "$TEMP_FILE"
-        fi
-    fi
-
-    echo "<h4>Metadados:</h4>" >> "$TEMP_FILE"
-    exif_data=$(exiftool "$filename" | awk -F': ' '{printf "<tr><td style=\"padding: 2px; font-weight: bold; font-size: 9px;  border: 1px solid #ddd; \">%s</td><td style=\"padding: 2px; font-size: 9px;border: 1px solid #ddd;\">%s</td></tr>", $1, $2}')
-    echo "<table style=\"border-collapse: collapse; width: 280px; font-family: monospace; font-size: 9px; background-color: #f4f4f4; border: none;\">$exif_data</table>" >> "$TEMP_FILE"
-
-    echo "<hr>" >> "$TEMP_FILE"
-    done < <(sqlite3 "$pasta/screencaption-db.db" "SELECT DISTINCT filename,1 basepath, hash, description, type, urlRegistro FROM screencaption WHERE filename IS NOT NULL AND basepath IS NOT NULL AND hash IS NOT NULL AND type IS NOT NULL;")
-
-    # Rodapé do arquivo HTML
-    echo "<h2>Logs de Navegação</h2>" >> "$TEMP_FILE"
-    echo "<p>Os logs de navegação são registros detalhados das atividades realizadas por um usuário em um navegador ou dispositivo. Eles incluem informações como URLs acessadas, horários de acesso, cookies, downloads e interações com páginas web. Sua importância para o OSINT pode ser resumida em:</p>" >> "$TEMP_FILE"
-    echo "<ul>" >> "$TEMP_FILE"
-    echo "<li><strong>Rastreamento de Atividades:</strong> Permitem identificar quais sites foram visitados, o tempo gasto em cada página e as ações realizadas, ajudando a traçar um perfil de comportamento do usuário.</li>" >> "$TEMP_FILE"
-    echo "<li><strong>Identificação de Padrões:</strong> Através da análise de logs, é possível detectar padrões de navegação, como horários de acesso frequentes ou preferências de conteúdo.</li>" >> "$TEMP_FILE"
-    echo "<li><strong>Investigação de Incidentes:</strong> Em casos de cibercrimes, os logs podem fornecer evidências sobre atividades suspeitas, como tentativas de acesso a sites maliciosos ou compartilhamento de informações sensíveis.</li>" >> "$TEMP_FILE"
-    echo "<li><strong>Coleta de Metadados:</strong> Informações como endereços IP, geolocalização e tipo de dispositivo podem ser extraídas dos logs, auxiliando na identificação de usuários ou sistemas.</li>" >> "$TEMP_FILE"
-    echo "</ul>" >> "$TEMP_FILE"
-    echo "<h2>Arquivos de Logs</h2>" >> "$TEMP_FILE"
-    echo "<table style=\"border-collapse: collapse; width: 100%; font-family: monospace; font-size: 12px;\">" >> "$TEMP_FILE"
-    echo "<tr style=\"background-color: #f2f2f2; text-align: left;\"><th style=\"border: 1px solid #ddd; padding: 8px;\">Arquivo</th><th style=\"border: 1px solid #ddd; padding: 8px;\">Hash SHA-256</th></tr>" >> "$TEMP_FILE"
-    for log_file in "$pasta/requests.txt" "$pasta/odysseus_snap.log" "$pasta/LogSistemaOperacional.log"; do
-        if [ -f "$log_file" ]; then
-            hash=$(sha256sum "$log_file" | awk '{print $1}')
-            echo "<tr><td style=\"border: 1px solid #ddd; padding: 8px;\"><a href=\"./logs/$(basename "$log_file")\">$(basename "$log_file")</a></td><td style=\"border: 1px solid #ddd; padding: 8px;\">$hash</td></tr>" >> "$TEMP_FILE"
-        fi
-    done
-    echo "</table>" >> "$TEMP_FILE"
-     
     echo "<h2>Ações</h2>" >> "$TEMP_FILE"
-    echo "<table style=\"border-collapse: collapse; width: 100%; font-family: monospace; font-size: 12px;\">" >> "$TEMP_FILE"
+    echo "<table style=\"border-collapse: collapse; width: 95%; font-family: monospace; font-size: 10px;\">" >> "$TEMP_FILE"
     echo "<tr style=\"background-color: #f2f2f2; text-align: left;\">" >> "$TEMP_FILE"
     echo "<th style=\"border: 1px solid #ddd; padding: 8px;\">ID</th>" >> "$TEMP_FILE"
-    echo "<th style=\"border: 1px solid #ddd; padding: 8px;\">Ação</th>" >> "$TEMP_FILE"
+    echo "<th style=\"border: 1px solid #ddd; padding: 8px;\">Ação</ th>" >> "$TEMP_FILE"
     echo "<th style=\"border: 1px solid #ddd; padding: 8px;\">Arquivo</th>" >> "$TEMP_FILE"
     echo "<th style=\"border: 1px solid #ddd; padding: 8px;\">Informações do Sistema</th>" >> "$TEMP_FILE"
     echo "<th style=\"border: 1px solid #ddd; padding: 8px;\">Data e Hora</th>" >> "$TEMP_FILE"
     echo "</tr>" >> "$TEMP_FILE"
     sqlite3 "$pasta/odysseus_snap.db" "SELECT id, acao, arquivo, info_sistema, data_hora FROM logs;" | while IFS="|" read -r id acao arquivo info_sistema data_hora; do
-        echo "<tr>" >> "$TEMP_FILE"
-        echo "<td style=\"border: 1px solid #ddd; padding: 8px;\">$id</td>" >> "$TEMP_FILE"
-        echo "<td style=\"border: 1px solid #ddd; padding: 8px;\">$acao</td>" >> "$TEMP_FILE"
-        echo "<td style=\"border: 1px solid #ddd; padding: 8px;\">$arquivo</td>" >> "$TEMP_FILE"
-        echo "<td style=\"border: 1px solid #ddd; padding: 8px;\">$info_sistema</td>" >> "$TEMP_FILE"
-        echo "<td style=\"border: 1px solid #ddd; padding: 8px;\">$data_hora</td>" >> "$TEMP_FILE"
-        echo "</tr>" >> "$TEMP_FILE"
+        echo "<tr><td style=\"border: 1px solid #ddd; padding: 8px;\">$id</td><td style=\"border: 1px solid #ddd; padding: 8px;\">$acao</td><td style=\"border: 1px solid #ddd; padding: 8px;\">$arquivo</td><td style=\"border: 1px solid #ddd; padding: 8px;\">$info_sistema</td><td style=\"border: 1px solid #ddd; padding: 8px;\">$data_hora</td></tr>" >> "$TEMP_FILE"
     done
     echo "</table>" >> "$TEMP_FILE"
     cat <<EOF >> "$TEMP_FILE"
